@@ -269,7 +269,20 @@ export function TreeCanvas() {
         document.body.classList.add('linking');
         setLink({ from: id, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, x: q.x, y: q.y, moved: false, target: null });
       },
-      onToggleCollapse: id => useArchive.getState().toggleCollapse(id),
+      onToggleCollapse: id => {
+        // после сворачивания дерево перестраивается и сдвигается — двигаем вид так,
+        // чтобы человек, на котором нажали, остался на том же месте экрана
+        const pos = () => useArchive.getState().data?.persons.find(p => p.id === id);
+        const before = pos();
+        const bx = before?.x ?? 0;
+        const by = before?.y ?? 0;
+        useArchive.getState().toggleCollapse(id);
+        const after = pos();
+        if (!before || !after) return;
+        const ui = useUi.getState();
+        const { x, y, scale } = ui.view;
+        ui.setView({ x: x - (after.x - bx) * scale, y: y - (after.y - by) * scale, scale });
+      },
       registerEl(id, el) {
         if (el) cardEls.current.set(id, el);
         else cardEls.current.delete(id);

@@ -160,6 +160,7 @@ export function normalizePerson(raw: unknown, seqFallback: number): Person | nul
     offX: typeof p.offX === 'number' ? p.offX : undefined,
     offK: typeof p.offK === 'string' ? p.offK : undefined,
     collapsed: !!p.collapsed,
+    gen: typeof p.gen === 'number' && Number.isInteger(p.gen) && p.gen >= 0 && p.gen < 100 ? p.gen : undefined,
     createdAt: num(p.createdAt, base.createdAt),
     updatedAt: num(p.updatedAt, base.updatedAt),
     ...stamps(p),

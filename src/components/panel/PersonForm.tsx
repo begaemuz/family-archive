@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { burialFilled, normBurial, SOCIAL_NETWORKS, cleanHandle } from '../../domain/normalize';
-import { fullName, isValidDate, normDate } from '../../domain/people';
+import { birthYear, fullName, isValidDate, normDate } from '../../domain/people';
 import type { Burial, Gender, Person, Social, SocialNetwork } from '../../domain/types';
 import { freeX } from '../../domain/layout';
+import { rulerItems } from '../../domain/edges';
 import { preparedFromBlob } from '../../flows/mediaFlows';
 import { confirmLeaveForm, linkPeople } from '../../flows/personFlows';
 import { pickFiles } from '../../hooks/useFilePicker';
@@ -55,6 +56,31 @@ const EMPTY: Fields = {
 
 type PhotoState = { kind: 'keep' } | { kind: 'new'; blob: Blob; url: string } | { kind: 'remove' };
 
+/** Пол — переключатель из двух половин. Сначала не выбран; повторный клик по выбранному снимает выбор. */
+function GenderSwitch({ value, onChange }: { value: string; onChange(v: string): void }) {
+  const opts = [
+    { v: 'Мужской', label: 'Мужской', sign: '♂', cls: 'male' },
+    { v: 'Женский', label: 'Женский', sign: '♀', cls: 'female' },
+  ];
+  return (
+    <div className={'gender-switch' + (value === 'Мужской' ? ' is-male' : value === 'Женский' ? ' is-female' : '')} role="radiogroup" aria-labelledby="f_gender_label">
+      <span className="gender-thumb" aria-hidden />
+      {opts.map(o => (
+        <button
+          type="button"
+          key={o.v}
+          role="radio"
+          aria-checked={value === o.v}
+          className={'gender-opt ' + o.cls + (value === o.v ? ' on' : '')}
+          onClick={() => onChange(value === o.v ? '' : o.v)}
+        >
+          <span className="gender-sign">{o.sign}</span> {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function PersonForm({ ctx }: { ctx: FormContext }) {
   const person = useArchive(s => (ctx.personId ? s.data?.persons.find(p => p.id === ctx.personId) : undefined));
   const anchor = useArchive(s => (ctx.anchorId ? s.data?.persons.find(p => p.id === ctx.anchorId) : undefined));
@@ -67,6 +93,19 @@ export function PersonForm({ ctx }: { ctx: FormContext }) {
   const [burial, setBurial] = useState<Burial>(() => normBurial(person?.burial));
   const [socials, setSocials] = useState<Social[]>(person?.socials ?? []);
   const [rel, setRel] = useState<RelChoice>('child');
+  const [gen, setGen] = useState<number | undefined>(person?.gen);
+  // выбор поколения — для человека без связей, когда в древе уже кто-то есть
+  const layout = useArchive(s => s.layout);
+  const others = useArchive(s => (s.data?.persons.length ?? 0) - (person ? 1 : 0));
+  const linked = useArchive(s => !!person && s.data!.relations.some(r => r.from === person.id || r.to === person.id));
+  const showGen = others > 0 && (isNew ? !anchor : !linked);
+  const gens = useMemo(() => {
+    if (!showGen) return [];
+    const items = rulerItems(layout, birthYear);
+    const last = items.length ? items[items.length - 1] : null;
+    const extra = last && /\d{4}/.test(last.text) ? '≈ ' + (Number(last.text.match(/\d{4}/g)!.pop()) + 28) : '';
+    return [...items.map(it => ({ level: it.level, text: it.text })), { level: items.length, text: extra || 'новое' }];
+  }, [layout, showGen]);
   const [advanced, setAdvanced] = useState(() => !!person && (ADVANCED.some(([k]) => person[k]) || person.socials.length > 0));
   const [photo, setPhoto] = useState<PhotoState>({ kind: 'keep' });
   const currentPhotoUrl = useMediaUrl(person?.mainPhotoId);
@@ -151,6 +190,7 @@ export function PersonForm({ ctx }: { ctx: FormContext }) {
       burial: deceased ? normBurial(burial) : normBurial(null),
       socials: socials.map(s => ({ ...s, handle: cleanHandle(s.handle) })).filter(s => s.handle),
     };
+    if (showGen) patch.gen = gen;
 
     // фото
     const oldPhoto = person?.mainPhotoId ?? null;
@@ -188,13 +228,9 @@ export function PersonForm({ ctx }: { ctx: FormContext }) {
 
   const field = ([k, label, type]: FieldDef) => (
     <div className="field" key={k}>
-      <label htmlFor={'f_' + k}>{label}</label>
+      {type === 'gender' ? <label id="f_gender_label">{label}</label> : <label htmlFor={'f_' + k}>{label}</label>}
       {type === 'gender' ? (
-        <select id={'f_' + k} value={f[k]} onChange={e => set(k, e.target.value)}>
-          <option value="">Не указан</option>
-          <option value="Мужской">Мужской</option>
-          <option value="Женский">Женский</option>
-        </select>
+        <GenderSwitch value={f[k]} onChange={v => set(k, v)} />
       ) : (
         <input
           id={'f_' + k}
@@ -246,6 +282,30 @@ export function PersonForm({ ctx }: { ctx: FormContext }) {
                 </select>
               </div>
             )}
+            {showGen && (
+              <div className="field full gen-field">
+                <label id="f_gen_label">Поколение</label>
+                <div className="gen-pick" role="radiogroup" aria-labelledby="f_gen_label">
+                  {gens.map(g => (
+                    <button
+                      type="button"
+                      key={g.level}
+                      role="radio"
+                      aria-checked={gen === g.level}
+                      className={'gen-chip' + (gen === g.level ? ' on' : '')}
+                      onClick={() => {
+                        setGen(gen === g.level ? undefined : g.level);
+                        touch();
+                      }}
+                    >
+                      <b>{g.level + 1}</b>
+                      <span>{g.text}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="gen-hint">{gen === undefined ? 'Не выбрано — по году рождения, а без него в первое поколение' : 'Когда появятся связи, поколение определят они'}</div>
+              </div>
+            )}
           </div>
         </section>
 
@@ -258,7 +318,7 @@ export function PersonForm({ ctx }: { ctx: FormContext }) {
               <div className="photo-main-preview">{photoUrl ? <img src={photoUrl} alt="Фото профиля" /> : <Icon name="user" size={34} />}</div>
               <div>
                 <div className="photo-title">Фото профиля</div>
-                <div className="photo-hint">После загрузки выберете квадратный кадр для круга. Видео, аудио и другие фото — во вкладке «Медиа»</div>
+                <div className="photo-hint">После загрузки выберете квадратный кадр для круга.</div>
                 <div className="photo-actions">
                   <button type="button" onClick={choosePhoto}>
                     <Icon name="upload" /> Загрузить

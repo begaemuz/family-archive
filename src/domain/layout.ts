@@ -101,7 +101,14 @@ function computeLevels(P: Person[], relations: Relation[]): { levelOf: Map<strin
 
   let base: number | null = null;
   const final = new Map<string, number>();
+  // одиночке без связей можно выбрать поколение вручную — ставим его после основного расчёта
+  const chosen: string[] = [];
   for (const ids of comps) {
+    const g = ids.length === 1 ? byId.get(ids[0])!.gen : undefined;
+    if (g !== undefined) {
+      chosen.push(ids[0]);
+      continue;
+    }
     const pts = ids
       .map(id => [birthYear(byId.get(id)!), local.get(id)!] as [number | null, number])
       .filter((x): x is [number, number] => x[0] !== null);
@@ -113,7 +120,8 @@ function computeLevels(P: Person[], relations: Relation[]): { levelOf: Map<strin
     ids.forEach(id => final.set(id, local.get(id)! + off));
   }
 
-  const min = P.length ? Math.min(...final.values()) : 0;
+  const min = final.size ? Math.min(...final.values()) : 0;
+  chosen.forEach(id => final.set(id, min + byId.get(id)!.gen!));
   const levelOf = new Map<string, number>();
   P.forEach(p => levelOf.set(p.id, final.get(p.id)! - min));
   const maxLevel = P.length ? Math.max(...levelOf.values()) : 0;

@@ -286,11 +286,24 @@
     pointer-events: none;
 }
 
+/* рамки лиц не мешают смотреть фото: видны при наведении (на телефоне — по нажатию);
+   рамка с открытым вопросом «Кажется, это …?» видна всегда */
+.lb-face {
+    opacity: 0;
+    transition: opacity .2s, border-color .15s, box-shadow .15s;
+}
+
+.lb-photo:hover .lb-face,
+.lb-photo.faces-on .lb-face,
+.lb-faces.show .lb-face,
+.lb-face.suggest {
+    opacity: 1;
+}
+
 .lb-face {
     position: absolute;
     border: 2px dashed rgba(255, 255, 255, .45);
     border-radius: 12px;
-    transition: border-color .15s, box-shadow .15s;
 }
 
 .lb-face.known {

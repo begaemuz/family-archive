@@ -63,7 +63,7 @@ export function FaceBoxes({ scan }: { scan: FaceScan }) {
   };
   if (!scan.matches.length) return null;
   return (
-    <div className="lb-faces" aria-hidden>
+    <div className={'lb-faces' + (scan.hover !== null ? ' show' : '')} aria-hidden>
       {scan.matches.map((m, i) => (
         <div
           key={i}

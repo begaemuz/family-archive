@@ -3,7 +3,8 @@ import { resolve } from 'node:path';
 import { legacyToArchive } from '../src/archive/legacyImport';
 import { relationGroups } from '../src/domain/kinship';
 import { ageText, isValidDate, normDate, yearLine } from '../src/domain/people';
-import { cleanHandle, socialUrl } from '../src/domain/normalize';
+import { cleanHandle, createPerson, socialUrl } from '../src/domain/normalize';
+import { layoutRows } from '../src/domain/layout';
 
 describe('даты', () => {
   it.each([
@@ -61,5 +62,24 @@ describe('родство', () => {
     expect(l9[21]).toBe('Шурин (брат жены)');
     expect(l9[10]).toBe('Сестра · родные');
     expect(l9[11]).toBe('Брат · по одному из родителей');
+  });
+});
+
+describe('выбор поколения у человека без связей', () => {
+  const mk = (seq: number, birth = '') => ({ ...createPerson(seq), birth });
+  const rel = (from: string, to: string) => ({ id: from + to, from, to, type: 'parent' as const });
+
+  it('одиночка встаёт в выбранное поколение, без выбора — в первое', () => {
+    const [a, b, c, alone] = [mk(1), mk(2), mk(3), mk(4)];
+    const relations = [rel(a.id, b.id), rel(b.id, c.id)];
+    expect(layoutRows([a, b, c, alone], relations).levelOf.get(alone.id)).toBe(0);
+    alone.gen = 2;
+    expect(layoutRows([a, b, c, alone], relations).levelOf.get(alone.id)).toBe(2);
+  });
+
+  it('со связями выбор не действует — поколение задают связи', () => {
+    const [a, b] = [mk(1), mk(2)];
+    b.gen = 0;
+    expect(layoutRows([a, b], [rel(a.id, b.id)]).levelOf.get(b.id)).toBe(1);
   });
 });

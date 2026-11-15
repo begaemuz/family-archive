@@ -82,6 +82,8 @@ export interface Person {
   offX?: number;
   offK?: string;
   collapsed: boolean;
+  /** выбранное поколение (с 0) — действует, пока у человека нет связей; дальше поколение задают связи */
+  gen?: number;
 
   createdAt: number;
   updatedAt: number;

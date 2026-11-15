@@ -50,7 +50,7 @@ export interface MergeChoices {
   side: Map<string, 'mine' | 'theirs'>;
 }
 
-const LAYOUT = new Set(['x', 'y', 'slot', 'offX', 'offK', 'collapsed', 'updatedAt', 'updatedBy', 'createdBy', 'createdAt', 'seq', 'legacyId']);
+const LAYOUT = new Set(['x', 'y', 'slot', 'offX', 'offK', 'collapsed', 'gen', 'updatedAt', 'updatedBy', 'createdBy', 'createdAt', 'seq', 'legacyId']);
 
 const PERSON_LABELS: Record<string, string> = {
   lastName: 'Фамилия',

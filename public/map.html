@@ -21,6 +21,7 @@
     (function () {
       var params = new URLSearchParams(location.search);
       var key = params.get('k') || '';
+      var suggestKey = params.get('s') || '';
       var parentWin = window.parent;
       var map = null;
       var mark = null;
@@ -70,13 +71,42 @@
         send({ type: 'ready' });
       }
 
-      function search(id, q) {
-        ymaps.geocode(q, { results: 6 }).then(function (res) {
+      function geocodeItems(q, n) {
+        return ymaps.geocode(q, { results: n }).then(function (res) {
           var items = [];
           res.geoObjects.each(function (g) {
             var c = g.geometry.getCoordinates();
             items.push({ name: g.getAddressLine ? g.getAddressLine() : g.properties.get('text'), title: g.properties.get('name'), lat: c[0], lng: c[1] });
           });
+          return items;
+        });
+      }
+
+      /* По названию («Северное кладбище Минск», «храм Николая Чудотворца») адресный геокодер не ищет —
+         для этого подсказки Яндекса (Геосаджест, нужен отдельный ключ): берём найденные места и их координаты. */
+      function suggestItems(q) {
+        if (!suggestKey || !ymaps.suggest) return Promise.resolve([]);
+        return ymaps.suggest(q, { results: 5 }).then(function (list) {
+          return Promise.all(list.map(function (sgt) {
+            return geocodeItems(sgt.value, 1).then(function (r) {
+              if (!r[0]) return null;
+              r[0].title = sgt.displayName.split(',')[0];
+              r[0].name = sgt.displayName;
+              return r[0];
+            }, function () { return null; });
+          }));
+        }).then(function (r) { return r.filter(Boolean); }, function () { return []; });
+      }
+
+      function search(id, q) {
+        Promise.all([suggestItems(q), geocodeItems(q, 6)]).then(function (r) {
+          var seen = {};
+          var items = r[0].concat(r[1]).filter(function (it) {
+            var k = it.lat.toFixed(4) + ',' + it.lng.toFixed(4);
+            if (seen[k]) return false;
+            seen[k] = true;
+            return true;
+          }).slice(0, 8);
           send({ type: 'results', id: id, items: items });
         }, function (err) {
           send({ type: 'results', id: id, error: true, items: [], message: String(err && (err.message || err.toString()) || '') });
@@ -95,7 +125,7 @@
 
       if (!key) return fail('Карта недоступна: не задан ключ Яндекс Карт');
       var s = document.createElement('script');
-      s.src = 'https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=' + encodeURIComponent(key);
+      s.src = 'https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=' + encodeURIComponent(key) + (suggestKey ? '&suggest_apikey=' + encodeURIComponent(suggestKey) : '');
       s.onload = function () {
         ymaps.ready(function () { if (pending) init(pending); pending = null; send({ type: 'loaded' }); });
       };

@@ -5,7 +5,9 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 const KEY = (import.meta.env.VITE_YANDEX_MAPS_KEY as string | undefined) ?? '';
-const SRC = `${import.meta.env.BASE_URL}map.html?k=${encodeURIComponent(KEY)}`;
+/** ключ «Геосаджеста» — поиск по названиям (кладбища, храмы, организации); без него ищутся только адреса */
+const SUGGEST_KEY = (import.meta.env.VITE_YANDEX_SUGGEST_KEY as string | undefined) ?? '';
+const SRC = `${import.meta.env.BASE_URL}map.html?k=${encodeURIComponent(KEY)}${SUGGEST_KEY ? `&s=${encodeURIComponent(SUGGEST_KEY)}` : ''}`;
 
 export interface PlaceResult {
   name: string;

@@ -85,7 +85,7 @@ const MAX_HISTORY = 5000;
 
 /* ---------- отметки «кто и когда» (для слияния копий) ---------- */
 // поля раскладки на холсте — это вид, а не данные: их изменение правкой не считается
-const LAYOUT_KEYS = new Set(['x', 'y', 'slot', 'offX', 'offK', 'collapsed']);
+const LAYOUT_KEYS = new Set(['x', 'y', 'slot', 'offX', 'offK', 'collapsed', 'gen']);
 const STAMP_KEYS = new Set(['updatedAt', 'updatedBy', 'createdBy', 'createdAt']);
 /** Содержимое записи без раскладки и отметок — сравнивается, чтобы понять, была ли правка. */
 export function contentKey(e: object): string {

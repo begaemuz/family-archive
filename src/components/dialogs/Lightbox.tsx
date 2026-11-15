@@ -141,6 +141,7 @@ export function Lightbox() {
   const item = media?.find(m => m.id === id);
   const url = useMediaUrl(id);
   const n = lb ? lb.ids.length : 0;
+  const [facesOn, setFacesOn] = useState(false);
   const ownerId = useMemo(() => (persons && item ? mediaOwnerId(persons, item.id) : null), [persons, item]);
   // распознавание — только там, где можно менять отметки
   const scan = useFaceScan(item, !!item && acc.canEditMediaItem(item, ownerId), !!lb?.scan);
@@ -169,7 +170,11 @@ export function Lightbox() {
   return (
     <div className="lightbox open" onClick={e => e.target === e.currentTarget && setLb(null)}>
       {item.kind === 'photo' && url && (
-        <div className="lb-photo" onClick={e => e.stopPropagation()}>
+        <div className={'lb-photo' + (facesOn ? ' faces-on' : '')} onClick={e => {
+          e.stopPropagation();
+          // на сенсорном экране наведения нет — рамки лиц по нажатию
+          if (matchMedia('(hover: none)').matches) setFacesOn(v => !v);
+        }}>
           <img src={url} alt={item.name} />
           <FaceBoxes scan={scan} />
         </div>

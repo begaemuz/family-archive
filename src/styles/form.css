@@ -282,3 +282,156 @@
     color: var(--muted);
     font-size: 12px;
 }
+
+/* ---------- пол: переключатель из двух половин ---------- */
+.field:has(.gender-switch) {
+    cursor: default;
+}
+
+.gender-switch {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-top: 4px;
+    padding: 3px;
+    border-radius: 12px;
+    background: var(--panel-3);
+    border: 1px solid var(--border);
+}
+
+/* ползунок под выбранной половиной; пока пол не выбран — спрятан */
+.gender-thumb {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 3px;
+    width: calc(50% - 3px);
+    border-radius: 9px;
+    opacity: 0;
+    transform: scale(.92);
+    transition: transform .22s cubic-bezier(.3, 1.3, .5, 1), opacity .15s, background .2s;
+}
+
+.gender-switch.is-male .gender-thumb,
+.gender-switch.is-female .gender-thumb {
+    opacity: 1;
+    box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, .15));
+}
+
+.gender-switch.is-male .gender-thumb {
+    transform: none;
+    background: linear-gradient(135deg, var(--male), color-mix(in srgb, var(--male) 70%, var(--accent)));
+}
+
+.gender-switch.is-female .gender-thumb {
+    transform: translateX(100%);
+    background: linear-gradient(135deg, var(--female), color-mix(in srgb, var(--female) 70%, var(--accent)));
+}
+
+.gender-switch .gender-opt {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 600;
+    transition: color .15s, background .15s;
+}
+
+.gender-switch .gender-opt:hover:not(.on) {
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+    color: var(--text);
+}
+
+.gender-switch .gender-opt.male:hover:not(.on) .gender-sign {
+    color: var(--male);
+}
+
+.gender-switch .gender-opt.female:hover:not(.on) .gender-sign {
+    color: var(--female);
+}
+
+.gender-switch .gender-opt.on {
+    color: #fff;
+}
+
+.gender-switch .gender-opt:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.gender-sign {
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* ---------- выбор поколения ---------- */
+.field:has(.gen-pick) {
+    cursor: default;
+}
+
+.gen-pick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.gen-pick .gen-chip {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    min-width: 64px;
+    height: 48px;
+    padding: 0 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--panel-3);
+    box-shadow: none;
+    color: var(--text);
+    transition: background .15s, border-color .15s, color .15s, transform .15s;
+}
+
+.gen-pick .gen-chip b {
+    font-size: 15px;
+    line-height: 1.1;
+}
+
+.gen-pick .gen-chip span {
+    font-size: 11.5px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.gen-pick .gen-chip:hover:not(.on) {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.gen-pick .gen-chip.on {
+    background: linear-gradient(135deg, var(--accent), #8a6bff);
+    border-color: transparent;
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.gen-pick .gen-chip.on span {
+    color: rgba(255, 255, 255, .85);
+}
+
+.gen-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--faint);
+}
