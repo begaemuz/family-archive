@@ -41,8 +41,11 @@ export function DocumentsTab({ person: p }: { person: Person }) {
 
   return (
     <div className="sp-body">
+      <button className="bio-add doc-add" onClick={add}>
+        <Icon name="plus" /> Добавить документ
+      </button>
       <div className="doc-list">
-        {docs.map(m => (
+        {docs.slice().reverse().map(m => (
           <div className="doc-item" key={m.id}>
             <span className="doc-ico">
               <Icon name="file" />
@@ -62,9 +65,6 @@ export function DocumentsTab({ person: p }: { person: Person }) {
           </div>
         ))}
       </div>
-      <button className="bio-add" onClick={add}>
-        <Icon name="plus" /> Добавить документ
-      </button>
       {!docs.length && (
         <div className="sp-empty" style={{ marginTop: 14 }}>
           Свидетельства, справки, письма, сканы — PDF, Word, Excel, текст или фото

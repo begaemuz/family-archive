@@ -89,7 +89,11 @@ export function MediaTab({ person: p }: { person: Person }) {
   const media = useArchive(s => s.data!.media);
   const persons = useArchive(s => s.data!.persons);
   // свои файлы + фото/видео других людей, где этот человек отмечен
-  const entries = useMemo(() => personMedia(p, media, persons), [p, media, persons]);
+  // новые свои файлы — сразу после кнопки «Добавить», дальше отмеченные на чужих фото
+  const entries = useMemo(() => {
+    const all = personMedia(p, media, persons);
+    return [...all.filter(e => e.own).reverse(), ...all.filter(e => !e.own)];
+  }, [p, media, persons]);
   const nameOf = (id: string | null) => {
     const o = id ? persons.find(x => x.id === id) : null;
     return o ? fullName(o) : '';
@@ -120,15 +124,19 @@ export function MediaTab({ person: p }: { person: Person }) {
             </div>
             {sec.kind === 'audio' ? (
               <div className="audio-list">
-                {list.map(({ item: m }) => (
-                  <AudioRow key={m.id} item={m} onDelete={() => askDeleteMedia(m.id, p.id)} />
-                ))}
                 <button className="audio-add" onClick={() => add(sec.kind, sec.accept)}>
                   <Icon name="plus" /> {sec.add}
                 </button>
+                {list.map(({ item: m }) => (
+                  <AudioRow key={m.id} item={m} onDelete={() => askDeleteMedia(m.id, p.id)} />
+                ))}
               </div>
             ) : (
               <div className={'album' + (sec.kind === 'video' ? ' album-video' : '')}>
+                <button className="album-add" onClick={() => add(sec.kind, sec.accept)}>
+                  <Icon name="plus" />
+                  {sec.add}
+                </button>
                 {list.map((e, i) => (
                   <Tile
                     key={e.item.id}
@@ -138,10 +146,6 @@ export function MediaTab({ person: p }: { person: Person }) {
                     onDelete={() => askDeleteMedia(e.item.id, p.id)}
                   />
                 ))}
-                <button className="album-add" onClick={() => add(sec.kind, sec.accept)}>
-                  <Icon name="plus" />
-                  {sec.add}
-                </button>
               </div>
             )}
           </section>

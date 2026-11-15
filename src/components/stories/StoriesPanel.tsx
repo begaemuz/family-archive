@@ -243,6 +243,10 @@ function StoryEditor({ story, onDone }: { story: Story; onDone(id: string | null
           <Icon name="image" /> Фото, видео, аудио
         </div>
         <div className="album">
+          <button className="album-add" onClick={attach}>
+            <Icon name="plus" />
+            Добавить
+          </button>
           {items.map(m => (
             <div key={m.id} style={{ position: 'relative' }}>
               <MediaThumb m={m} onClick={() => {}} />
@@ -251,10 +255,6 @@ function StoryEditor({ story, onDone }: { story: Story; onDone(id: string | null
               </button>
             </div>
           ))}
-          <button className="album-add" onClick={attach}>
-            <Icon name="plus" />
-            Добавить
-          </button>
         </div>
       </div>
       <div className="modal-footer">

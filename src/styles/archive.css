@@ -1125,3 +1125,8 @@ body.panel-open .action-dock {
     outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
     outline-offset: -2px;
 }
+
+/* «Добавить документ» — первой, над списком */
+.doc-add {
+    margin: 0 0 10px;
+}
