@@ -10,6 +10,7 @@ import { createRelativeFlow, editPersonFlow, viewPersonFlow } from '../../flows/
 import { PersonCard, type CardActions } from './PersonCard';
 import { GenerationRuler } from './GenerationRuler';
 import { CanvasControls } from './CanvasControls';
+import { ActionDock } from './ActionDock';
 import { EmptyTree } from './EmptyTree';
 
 interface DragState {
@@ -336,6 +337,7 @@ export function TreeCanvas() {
       </div>
       <GenerationRuler />
       {data && !persons.length && <EmptyTree />}
+      <ActionDock />
       <CanvasControls onZoom={k => setZoom(useUi.getState().view.scale * k)} onFit={fitTree} />
     </div>
   );

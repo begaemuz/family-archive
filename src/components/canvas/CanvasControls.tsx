@@ -5,6 +5,8 @@ export function CanvasControls({ onZoom, onFit }: { onZoom(k: number): void; onF
   const scale = useUi(s => s.view.scale);
   const dots = useUi(s => s.dots);
   const setDots = useUi(s => s.setDots);
+  const theme = useUi(s => s.theme);
+  const setTheme = useUi(s => s.setTheme);
   return (
     <div className="canvas-controls">
       <button title="Уменьшить" onClick={() => onZoom(1 / 1.15)}>
@@ -20,6 +22,9 @@ export function CanvasControls({ onZoom, onFit }: { onZoom(k: number): void; onF
       <span className="ctrl-sep" />
       <button title={dots ? 'Скрыть точки фона' : 'Показать точки фона'} aria-pressed={!dots} onClick={() => setDots(!dots)}>
         <Icon name={dots ? 'dots' : 'dots-off'} />
+      </button>
+      <button title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+        <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
       </button>
     </div>
   );

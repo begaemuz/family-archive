@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArchiveError } from '../../archive/container';
 import { pickArchiveFile } from '../../archive/fileAccess';
 import { pickFiles } from '../../hooks/useFilePicker';
@@ -6,6 +6,7 @@ import { useSession } from '../../store/sessionStore';
 import { useUi } from '../../store/uiStore';
 import { Icon } from '../../ui/Icon';
 import { PasswordField } from './PasswordField';
+import { Landing, LandingHeader } from '../landing/Landing';
 
 type View = 'home' | 'create' | 'import' | 'restore';
 
@@ -43,72 +44,54 @@ export function StartScreen() {
     }
   };
 
-  let body;
+  const draftCard = draft && (
+    <div className="draft-card">
+      <Icon name="info" />
+      <div>
+        <b>{draft.saved ? 'Последний открытый архив' : 'Несохранённые изменения'}</b>
+        <small>
+          «{draft.title}», {new Date(draft.savedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+        </small>
+      </div>
+      <button className="primary" onClick={() => setView('restore')}>
+        {draft.saved ? 'Продолжить' : 'Восстановить'}
+      </button>
+      <button
+        className="ghost danger icon-button"
+        title={draft.saved ? 'Забыть' : 'Удалить черновик'}
+        onClick={async () => {
+          const ok = draft.saved
+            ? await useUi.getState().confirm({ title: 'Забыть последний архив?', body: 'Сам файл .family не пострадает — его можно будет открыть снова.', ok: 'Забыть', danger: false, icon: 'x' })
+            : await useUi.getState().confirm({ title: 'Удалить несохранённые изменения?', body: 'Восстановить их будет нельзя.', ok: 'Удалить' });
+          if (ok === true) useSession.getState().discardDraft();
+        }}
+      >
+        <Icon name="trash" />
+      </button>
+    </div>
+  );
+
+  let body: ReactNode = null;
   if (pending) body = <UnlockForm fileName={pending.file.name} />;
   else if (pendingImport) body = <CreateForm mode="import" count={pendingImport.data.persons.length} onBack={() => useSession.setState({ pendingImport: null })} />;
   else if (view === 'create') body = <CreateForm mode="create" onBack={() => setView('home')} />;
   else if (view === 'restore' && draft) body = <RestoreForm title={draft.title} saved={draft.saved} onBack={() => setView('home')} />;
-  else
-    body = (
-      <div className="start-card">
-        <div className="start-logo">
-          <Icon name="tree" size={34} />
-        </div>
-        <h1>Семейный архив</h1>
-        <p className="start-motto">История вашей семьи принадлежит только вашей семье</p>
-        <p className="start-sub">
-          Родословное древо, фото, видео, документы и истории — в одном зашифрованном файле <b>.family</b>. Всё хранится у вас и никуда не отправляется.
-        </p>
-        {draft && (
-          <div className="draft-card">
-            <Icon name="info" />
-            <div>
-              <b>{draft.saved ? 'Последний открытый архив' : 'Несохранённые изменения'}</b>
-              <small>
-                «{draft.title}», {new Date(draft.savedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-              </small>
-            </div>
-            <button className="primary" onClick={() => setView('restore')}>
-              {draft.saved ? 'Продолжить' : 'Восстановить'}
-            </button>
-            <button
-              className="ghost danger icon-button"
-              title={draft.saved ? 'Забыть' : 'Удалить черновик'}
-              onClick={async () => {
-                const ok = draft.saved
-                  ? await useUi.getState().confirm({ title: 'Забыть последний архив?', body: 'Сам файл .family не пострадает — его можно будет открыть снова.', ok: 'Забыть', danger: false, icon: 'x' })
-                  : await useUi.getState().confirm({ title: 'Удалить несохранённые изменения?', body: 'Восстановить их будет нельзя.', ok: 'Удалить' });
-                if (ok === true) useSession.getState().discardDraft();
-              }}
-            >
-              <Icon name="trash" />
-            </button>
-          </div>
-        )}
-        <div className="start-actions big">
-          <button className="primary" onClick={() => setView('create')}>
-            <Icon name="plus" />
-            Создать семейный альбом
-          </button>
-          <button onClick={openFile}>
-            <Icon name="unlock" />
-            Открыть архив .family
-          </button>
-        </div>
-        <button className="ghost start-folder" onClick={importOld}>
-          <Icon name="upload" />
-          Перенести дерево из старой версии (ZIP / JSON)
-        </button>
-        <div className="drop-hint">
-          <Icon name="download" />
-          или перетащите файл сюда
-        </div>
-      </div>
-    );
+  const home = !body;
+
+  const goHome = () => {
+    if (busy) return;
+    useSession.setState({ pending: null, pendingImport: null });
+    setView('home');
+  };
 
   return (
-    <div className="start-screen">
-      {body}
+    <div className={'start-screen' + (home ? ' is-home' : '')}>
+      <LandingHeader home={home} onHome={goHome} onOpen={openFile} />
+      {home ? (
+        <Landing draftCard={draftCard} onCreate={() => setView('create')} onOpen={openFile} onImport={importOld} />
+      ) : (
+        <div className="start-center">{body}</div>
+      )}
       {busy && (
         <div className="busy">
           <span className="spinner" />

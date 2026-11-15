@@ -21,14 +21,19 @@ export function App() {
   useEffect(() => {
     document.body.dataset.theme = theme;
   }, [theme]);
+  // боковая панель или истории открыты — плавающие панели справа отодвигаются от неё
+  const sideOpen = useUi(s => s.panel.open || s.storiesOpen);
+  useEffect(() => {
+    document.body.classList.toggle('panel-open', sideOpen && hasArchive);
+  }, [sideOpen, hasArchive]);
   useHotkeys();
   useArchiveLifecycle();
 
   return (
     <>
-      <TopBar />
       {hasArchive ? (
         <>
+          <TopBar />
           <main className="app">
             <TreeCanvas />
           </main>

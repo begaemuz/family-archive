@@ -77,6 +77,8 @@ export default defineConfig(({ mode }) => {
                 // pdfmake и шрифты PDF — крупные, но тоже нужны офлайн
                 maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
                 navigateFallback: 'index.html',
+                // офлайн-версия одним файлом скачивается как есть, без подмены главной страницей
+                navigateFallbackDenylist: [/family-archive\.html$/],
                 // плитки карты и поиск адреса не кэшируем
                 runtimeCaching: [],
               },
