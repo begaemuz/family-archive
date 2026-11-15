@@ -1,30 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
-import { addTiles, L, mapLinks, searchPlaces, type PlaceResult } from '../../ui/maps';
+import { useRef, useState } from 'react';
 import { Icon } from '../../ui/Icon';
+import { mapLinks, YandexMap, type PlaceResult, type YandexMapApi } from '../../ui/YandexMap';
 
-/** Мини-карта места захоронения в карточке (только просмотр). */
+/** Мини-карта места захоронения в карточке (только просмотр) — Яндекс Карты. */
 export function BurialMiniMap({ lat, lng }: { lat: number; lng: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!ref.current) return;
-    const m = L.map(ref.current, {
-      zoomControl: false,
-      dragging: false,
-      scrollWheelZoom: false,
-      doubleClickZoom: false,
-      boxZoom: false,
-      keyboard: false,
-      touchZoom: false,
-    }).setView([lat, lng], 16);
-    addTiles(m);
-    L.marker([lat, lng]).addTo(m);
-    return () => {
-      m.remove();
-    };
-  }, [lat, lng]);
   return (
     <>
-      <div className="burial-map" ref={ref} />
+      <YandexMap mode="view" point={{ lat, lng }} className="burial-map" />
       <div className="map-links">
         {mapLinks(lat, lng).map(l => (
           <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer">
@@ -36,7 +18,7 @@ export function BurialMiniMap({ lat, lng }: { lat: number; lng: number }) {
   );
 }
 
-/** Выбор точки на карте: клик, перетаскивание маркера, поиск. */
+/** Выбор точки на карте: клик, перетаскивание метки, поиск адреса (геокодер Яндекса). */
 export function BurialMapPicker({
   point,
   onChange,
@@ -46,54 +28,15 @@ export function BurialMapPicker({
   onChange(p: { lat: number; lng: number } | null): void;
   onFoundCemetery(name: string): void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  const api = useRef<YandexMapApi>(null);
   const [q, setQ] = useState('');
   const [results, setResults] = useState<PlaceResult[] | 'loading' | 'empty' | 'error' | null>(null);
 
-  useEffect(() => {
-    if (!ref.current) return;
-    const m = L.map(ref.current, { zoomControl: true });
-    if (point) m.setView([point.lat, point.lng], 16);
-    else m.setView([48, 60], 3);
-    addTiles(m);
-    m.on('click', e => onChangeRef.current({ lat: e.latlng.lat, lng: e.latlng.lng }));
-    mapRef.current = m;
-    return () => {
-      m.remove();
-      mapRef.current = null;
-      markerRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // маркер следует за точкой
-  useEffect(() => {
-    const m = mapRef.current;
-    if (!m) return;
-    if (!point) {
-      markerRef.current?.remove();
-      markerRef.current = null;
-      return;
-    }
-    if (!markerRef.current) {
-      const mk = L.marker([point.lat, point.lng], { draggable: true }).addTo(m);
-      mk.on('dragend', () => {
-        const ll = mk.getLatLng();
-        onChangeRef.current({ lat: ll.lat, lng: ll.lng });
-      });
-      markerRef.current = mk;
-    } else markerRef.current.setLatLng([point.lat, point.lng]);
-  }, [point]);
-
   const doSearch = async () => {
-    if (!q.trim()) return;
+    if (!q.trim() || !api.current) return;
     setResults('loading');
     try {
-      const r = await searchPlaces(q.trim());
+      const r = await api.current.search(q.trim());
       setResults(r.length ? r : 'empty');
     } catch {
       setResults('error');
@@ -126,7 +69,7 @@ export function BurialMapPicker({
       <div className="map-results">
         {results === 'loading' && <div className="map-hint">Ищу…</div>}
         {results === 'empty' && <div className="map-hint">Ничего не найдено</div>}
-        {results === 'error' && <div className="map-hint">Поиск недоступен — проверьте интернет</div>}
+        {results === 'error' && <div className="map-hint">Поиск сейчас недоступен — поставьте точку кликом по карте</div>}
         {Array.isArray(results) &&
           results.map((r, i) => (
             <button
@@ -136,8 +79,7 @@ export function BurialMapPicker({
               onClick={() => {
                 setResults(null);
                 onChange({ lat: r.lat, lng: r.lng });
-                mapRef.current?.setView([r.lat, r.lng], Math.max(mapRef.current.getZoom(), 16));
-                if (/кладбищ|cemetery/i.test(r.name)) onFoundCemetery(r.name.split(',')[0]);
+                if (/кладбищ|cemetery|мазар/i.test(r.name)) onFoundCemetery(r.name.split(',').pop()!.trim());
               }}
             >
               <Icon name="pin" />
@@ -145,7 +87,7 @@ export function BurialMapPicker({
             </button>
           ))}
       </div>
-      <div className="map-box" ref={ref} />
+      <YandexMap ref={api} mode="pick" point={point} onPick={p => onChange(p)} className="map-box" />
       <div className="map-coords">
         <span>{point ? `${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}` : 'Точка не выбрана — нажмите на карту'}</span>
         {point && (

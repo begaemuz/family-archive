@@ -8,23 +8,24 @@ import { VitePWA } from 'vite-plugin-pwa';
 //  • обычная (npm run build)            — сайт для GitHub Pages, в папку dist/ (работает и офлайн после первого открытия)
 //  • автономная (npm run build:single)  — один файл dist-single/family-archive.html, открывается с диска без интернета
 
-/** Content-Security-Policy: всё своё, наружу — только плитки карты и поиск адреса. */
+/** Content-Security-Policy приложения: всё своё, ни одного внешнего адреса.
+    Карта Яндекса живёт в отдельной изолированной рамке map.html (sandbox без allow-same-origin):
+    приложению достаточно разрешить встраивание собственной страницы — frame-src 'self'. */
 function csp(single: boolean): string {
-  const tiles = 'https://tile.openstreetmap.org https://server.arcgisonline.com';
   return [
     "default-src 'self'",
     // в однофайловой сборке скрипт встроен в страницу; wasm — для Argon2id
     `script-src 'self' ${single ? "'unsafe-inline' " : ''}'wasm-unsafe-eval'`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' blob: data: ${tiles}`,
+    "img-src 'self' blob: data:",
     "media-src 'self' blob:",
     "font-src 'self' data:",
-    "connect-src 'self' data: blob: https://nominatim.openstreetmap.org",
+    "connect-src 'self' data: blob:",
     "worker-src 'self'",
     "object-src 'none'",
     "base-uri 'none'",
     "form-action 'none'",
-    "frame-src 'none'",
+    "frame-src 'self'",
   ].join('; ');
 }
 
@@ -81,8 +82,9 @@ export default defineConfig(({ mode }) => {
                 maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
                 navigateFallback: 'index.html',
                 // офлайн-версия одним файлом скачивается как есть, без подмены главной страницей
-                navigateFallbackDenylist: [/family-archive\.html$/],
-                // плитки карты и поиск адреса не кэшируем
+                navigateFallbackDenylist: [/family-archive\.html$/, /map\.html/],
+                // страница карты открывается с ключом в адресе (?k=…) — для кэша это та же map.html
+                ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^k$/],
                 runtimeCaching: [],
               },
             }),

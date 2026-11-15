@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Карта</title>
+  <style>
+    html, body, #map { margin: 0; width: 100%; height: 100%; }
+    body { font: 13px system-ui, sans-serif; background: #e9edf4; }
+    #msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; color: #687387; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="msg">Загружаю карту…</div>
+  <script>
+    /* Карта Яндекса в изолированной рамке (iframe sandbox без allow-same-origin):
+       у кода Яндекса нет доступа к странице приложения и к архиву.
+       Обмен с приложением — только сообщениями: координаты, поисковый запрос и найденные места. */
+    (function () {
+      var params = new URLSearchParams(location.search);
+      var key = params.get('k') || '';
+      var parentWin = window.parent;
+      var map = null;
+      var mark = null;
+      var mode = 'view';
+      var msg = document.getElementById('msg');
+
+      function send(data) { parentWin.postMessage(Object.assign({ yandexMap: true }, data), '*'); }
+      window.addEventListener('error', function (e) { send({ type: 'debug', message: String(e.message || e) }); });
+      window.addEventListener('unhandledrejection', function (e) { send({ type: 'debug', message: 'rejection: ' + String(e.reason && e.reason.message || e.reason) }); });
+      function fail(text) { msg.textContent = text; msg.style.display = 'grid'; send({ type: 'error', message: text }); }
+
+      function setMark(lat, lng, center) {
+        if (lat == null || lng == null) {
+          if (mark) { map.geoObjects.remove(mark); mark = null; }
+          return;
+        }
+        if (!mark) {
+          mark = new ymaps.Placemark([lat, lng], {}, { preset: 'islands#violetDotIcon', draggable: mode === 'pick' });
+          mark.events.add('dragend', function () {
+            var c = mark.geometry.getCoordinates();
+            send({ type: 'pick', lat: c[0], lng: c[1] });
+          });
+          map.geoObjects.add(mark);
+        } else mark.geometry.setCoordinates([lat, lng]);
+        if (center) map.setCenter([lat, lng], Math.max(map.getZoom(), 16));
+      }
+
+      function init(o) {
+        mode = o.mode === 'pick' ? 'pick' : 'view';
+        var has = typeof o.lat === 'number' && typeof o.lng === 'number';
+        map = new ymaps.Map('map', {
+          center: has ? [o.lat, o.lng] : [48, 60],
+          zoom: has ? 16 : 3,
+          controls: mode === 'pick' ? ['zoomControl', 'typeSelector', 'fullscreenControl'] : [],
+        }, { suppressMapOpenBlock: true, yandexMapDisablePoiInteractivity: true });
+        if (mode === 'view') {
+          map.behaviors.disable(['drag', 'scrollZoom', 'dblClickZoom', 'multiTouch', 'rightMouseButtonMagnifier']);
+        } else {
+          map.events.add('click', function (e) {
+            var c = e.get('coords');
+            setMark(c[0], c[1], false);
+            send({ type: 'pick', lat: c[0], lng: c[1] });
+          });
+        }
+        if (has) setMark(o.lat, o.lng, false);
+        msg.style.display = 'none';
+        send({ type: 'ready' });
+      }
+
+      function search(id, q) {
+        ymaps.geocode(q, { results: 6 }).then(function (res) {
+          var items = [];
+          res.geoObjects.each(function (g) {
+            var c = g.geometry.getCoordinates();
+            items.push({ name: g.getAddressLine ? g.getAddressLine() : g.properties.get('text'), title: g.properties.get('name'), lat: c[0], lng: c[1] });
+          });
+          send({ type: 'results', id: id, items: items });
+        }, function (err) {
+          send({ type: 'results', id: id, error: true, items: [], message: String(err && (err.message || err.toString()) || '') });
+        });
+      }
+
+      var pending = null;
+      window.addEventListener('message', function (e) {
+        if (e.source !== parentWin || !e.data || !e.data.yandexMap) return;
+        var d = e.data;
+        if (d.type === 'init') { if (window.ymaps) ymaps.ready(function () { init(d); }); else pending = d; }
+        if (!map && d.type !== 'search') return;
+        if (d.type === 'set') setMark(d.lat, d.lng, true);
+        if (d.type === 'search') { if (window.ymaps) ymaps.ready(function () { search(d.id, d.q); }); }
+      });
+
+      if (!key) return fail('Карта недоступна: не задан ключ Яндекс Карт');
+      var s = document.createElement('script');
+      s.src = 'https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=' + encodeURIComponent(key);
+      s.onload = function () {
+        ymaps.ready(function () { if (pending) init(pending); pending = null; send({ type: 'loaded' }); });
+      };
+      s.onerror = function () { fail('Карта недоступна — нужен интернет'); };
+      document.head.appendChild(s);
+    })();
+  </script>
+</body>
+</html>
