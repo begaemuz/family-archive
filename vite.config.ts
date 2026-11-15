@@ -62,8 +62,8 @@ export default defineConfig(({ mode }) => {
               injectRegister: 'script-defer',
               includeAssets: ['icon.svg', 'logo.svg', 'logo-512.png'],
               manifest: {
-                name: 'Семейный архив',
-                short_name: 'Семья',
+                name: 'Rodiva — семейный архив',
+                short_name: 'Rodiva',
                 description: 'Родословное древо, фото, видео и истории семьи — в одном зашифрованном файле',
                 lang: 'ru',
                 theme_color: '#4f63e8',

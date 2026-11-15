@@ -13,7 +13,25 @@ type View = 'home' | 'create' | 'import' | 'restore';
 const errText = (e: unknown) =>
   e instanceof ArchiveError ? e.message : (e as Error)?.message === 'wrong-password' ? 'Неверный пароль' : 'Не удалось открыть: ' + ((e as Error)?.message || 'ошибка');
 
-/** Экран без открытого архива: создать, открыть, импортировать, восстановить. */
+/** Был ли архив открыт в этой вкладке перед обновлением страницы (метка ставится в App, данных в ней нет). */
+const ARCHIVE_OPEN_KEY = 'rodiva.archiveOpen';
+export function markArchiveOpen(open: boolean) {
+  try {
+    if (open) sessionStorage.setItem(ARCHIVE_OPEN_KEY, '1');
+    else sessionStorage.removeItem(ARCHIVE_OPEN_KEY);
+  } catch {
+    /* хранилище недоступно — просто не восстанавливаем автоматически */
+  }
+}
+function wasArchiveOpen(): boolean {
+  try {
+    return sessionStorage.getItem(ARCHIVE_OPEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** Экран без открытого архива: создать, открыть, восстановить. */
 export function StartScreen() {
   const [view, setView] = useState<View>('home');
   const pending = useSession(s => s.pending);
@@ -21,11 +39,12 @@ export function StartScreen() {
   const draft = useSession(s => s.draft);
   const busy = useSession(s => s.busy);
 
-  // после обновления страницы сразу предлагаем продолжить с открытым архивом (один раз — «Другой архив» ведёт на главную)
-  const autoShown = useRef(false);
+  // окно пароля сразу — только если архив был открыт в этой вкладке в момент обновления страницы;
+  // если человек был на главной, F5 — обычное обновление (карточка «Продолжить» остаётся на лендинге)
+  const resumeOnLoad = useRef(wasArchiveOpen());
   useEffect(() => {
-    if (draft && !autoShown.current) {
-      autoShown.current = true;
+    if (draft && resumeOnLoad.current) {
+      resumeOnLoad.current = false;
       setView('restore');
     }
   }, [draft]);
@@ -62,18 +81,21 @@ export function StartScreen() {
     </div>
   );
 
+  const goHome = () => {
+    if (busy) return;
+    resumeOnLoad.current = false;
+    markArchiveOpen(false);
+    useSession.setState({ pending: null, pendingImport: null });
+    setView('home');
+  };
+
   let body: ReactNode = null;
   if (pending) body = <UnlockForm fileName={pending.file.name} />;
   else if (pendingImport) body = <CreateForm mode="import" count={pendingImport.data.persons.length} onBack={() => useSession.setState({ pendingImport: null })} />;
   else if (view === 'create') body = <CreateForm mode="create" onBack={() => setView('home')} />;
-  else if (view === 'restore' && draft) body = <RestoreForm title={draft.title} saved={draft.saved} onBack={() => setView('home')} />;
+  else if (view === 'restore' && draft) body = <RestoreForm title={draft.title} saved={draft.saved} onBack={goHome} />;
   const home = !body;
 
-  const goHome = () => {
-    if (busy) return;
-    useSession.setState({ pending: null, pendingImport: null });
-    setView('home');
-  };
 
   return (
     <div className={'start-screen' + (home ? ' is-home' : '')}>

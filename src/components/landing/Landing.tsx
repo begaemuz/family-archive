@@ -49,7 +49,7 @@ export function LandingHeader({ home, onHome, onOpen }: { home: boolean; onHome(
         <span className="brand-logo">
           <Logo size={36} />
         </span>
-        Семейный архив
+        Rodiva
       </button>
       {home && (
         <nav className="lp-nav">
@@ -252,7 +252,7 @@ export function Landing({
       </section>
 
       <footer className="lp-footer">
-        <span>Семейный архив — открытый проект · Фото: Unsplash</span>
+        <span>Rodiva — семейный архив, открытый проект · Фото: Unsplash</span>
         <span className="lp-footer-links">
           <a href={REPO} target="_blank" rel="noopener noreferrer">
             Исходный код на GitHub

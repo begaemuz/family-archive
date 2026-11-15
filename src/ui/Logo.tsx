@@ -1,36 +1,36 @@
 import { useId } from 'react';
 
-/* Логотип «Семейный архив»: лист, чьи прожилки — родословная.
-   Главная прожилка — ствол рода, ответвления ведут к людям-узлам. Лист — род и рост,
-   вторая половина чуть светлее для объёма. Фон прозрачный, прожилки вырезаны насквозь —
-   знак одинаково читается на светлом и тёмном фоне. Те же формы — в public/logo.svg. */
+/* Логотип Rodiva: буква R, нарисованная линиями родословной. Три её конца —
+   основание ствола, «ножка» и изгиб — заканчиваются кольцами-узлами, как люди на древе.
+   Центры колец вырезаны насквозь, фон прозрачный — знак читается на светлом и тёмном фоне.
+   Те же формы — в public/logo.svg. */
 export function Logo({ size = 32, className }: { size?: number; className?: string }) {
   const id = useId().replace(/:/g, '');
+  const g = `url(#rg${id})`;
   return (
-    <svg className={className} width={size} height={size} viewBox="0 0 64 64" role="img" aria-label="Семейный архив">
+    <svg className={className} width={size} height={size} viewBox="0 0 64 64" role="img" aria-label="Rodiva">
       <defs>
-        <linearGradient id={`lg${id}`} x1="0" y1="1" x2="1" y2="0">
+        <linearGradient id={`rg${id}`} gradientUnits="userSpaceOnUse" x1="10" y1="8" x2="54" y2="60">
           <stop offset="0" stopColor="#5b6cff" />
           <stop offset="1" stopColor="#8a6bff" />
         </linearGradient>
-        <mask id={`lm${id}`}>
+        <mask id={`rm${id}`}>
           <rect width="64" height="64" fill="#fff" />
-          <g stroke="#000" strokeWidth="3.2" strokeLinecap="round" fill="none">
-            <path d="M21 43 L41 23" />
-            <path d="M27.5 36.5 L24.5 25.5" />
-            <path d="M34 30 L44 33.5" />
-          </g>
-          <g fill="#000">
-            <circle cx="24" cy="23.5" r="4.2" />
-            <circle cx="45.5" cy="34" r="4.2" />
-            <circle cx="42.5" cy="21.5" r="4.8" />
-          </g>
+          <circle cx="18" cy="53" r="3" fill="#000" />
+          <circle cx="45" cy="52" r="3" fill="#000" />
+          <circle cx="45.5" cy="24.5" r="3" fill="#000" />
         </mask>
       </defs>
-      <path d="M15 49 L6.5 57.5" stroke={`url(#lg${id})`} strokeWidth="4.5" strokeLinecap="round" />
-      <g mask={`url(#lm${id})`}>
-        <path d="M12 52 C6 28 24 8 56 8 C56 40 36 58 12 52 Z" fill={`url(#lg${id})`} />
-        <path d="M12 52 C22 48 40 30 56 8 C56 40 36 58 12 52 Z" fill="#fff" opacity=".16" />
+      <g mask={`url(#rm${id})`}>
+        <g fill="none" stroke={g} strokeWidth="7.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 51 V13 H32.5 a11.5 11.5 0 0 1 0 23 H18" />
+          <path d="M30 36 L42.5 49.5" />
+        </g>
+        <g fill={g}>
+          <circle cx="18" cy="53" r="7.2" />
+          <circle cx="45" cy="52" r="7.2" />
+          <circle cx="45.5" cy="24.5" r="7.2" />
+        </g>
       </g>
     </svg>
   );

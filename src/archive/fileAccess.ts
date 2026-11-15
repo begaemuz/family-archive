@@ -16,7 +16,7 @@ const w = window as PickerWindow;
 
 export const canWriteFiles = () => typeof w.showSaveFilePicker === 'function';
 
-const TYPES = [{ description: 'Семейный архив', accept: { 'application/octet-stream': ['.family'] } }];
+const TYPES = [{ description: 'Архив Rodiva', accept: { 'application/octet-stream': ['.family'] } }];
 
 export function safeFileName(title: string): string {
   return (title.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim() || 'Семейный архив').slice(0, 80) + '.family';

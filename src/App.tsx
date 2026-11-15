@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { DropZone } from './components/app/DropZone';
-import { StartScreen } from './components/app/StartScreen';
+import { markArchiveOpen, StartScreen } from './components/app/StartScreen';
 import { TopBar } from './components/app/TopBar';
 import { TreeCanvas } from './components/canvas/TreeCanvas';
 import { ConfirmDialog } from './components/dialogs/ConfirmDialog';
@@ -26,6 +26,14 @@ export function App() {
   useEffect(() => {
     document.body.classList.toggle('panel-open', sideOpen && hasArchive);
   }, [sideOpen, hasArchive]);
+  // метка «архив открыт в этой вкладке»: после F5 сразу спросим пароль, а с главной F5 — обычное обновление.
+  // Снимаем её, только когда архив был открыт и закрылся (при загрузке страницы метку читает StartScreen).
+  const hadArchive = useRef(false);
+  useEffect(() => {
+    if (hasArchive) markArchiveOpen(true);
+    else if (hadArchive.current) markArchiveOpen(false);
+    hadArchive.current = hasArchive;
+  }, [hasArchive]);
   useHotkeys();
   useArchiveLifecycle();
 
