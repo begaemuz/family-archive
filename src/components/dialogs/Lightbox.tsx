@@ -64,23 +64,25 @@ function PhotoPeople({ item, scan, onOpenPerson }: { item: MediaItem; scan: Face
       <span className="lb-people-title">
         <Icon name="users" size={15} /> На фото:
       </span>
-      {owner && (
-        <button className="lb-chip owner" title="Фото в альбоме этого человека — открыть карточку" onClick={() => onOpenPerson(owner.id)}>
-          {fullName(owner)}
-        </button>
-      )}
-      {tagged.map(p => (
-        <span className="lb-chip" key={p.id}>
-          <button className="lb-chip-name" title="Открыть карточку" onClick={() => onOpenPerson(p.id)}>
-            {fullName(p)}
+      <div className="lb-chips">
+        {owner && (
+          <button className="lb-chip owner" title="Фото в альбоме этого человека — открыть карточку" onClick={() => onOpenPerson(owner.id)}>
+            {fullName(owner)}
           </button>
-          {editable && (
-            <button className="lb-chip-x" title="Убрать отметку" onClick={() => setPeople(item.people.filter(x => x !== p.id))}>
-              <Icon name="x" size={13} />
+        )}
+        {tagged.map(p => (
+          <span className="lb-chip" key={p.id}>
+            <button className="lb-chip-name" title="Открыть карточку" onClick={() => onOpenPerson(p.id)}>
+              {fullName(p)}
             </button>
-          )}
-        </span>
-      ))}
+            {editable && (
+              <button className="lb-chip-x" title="Убрать отметку" onClick={() => setPeople(item.people.filter(x => x !== p.id))}>
+                <Icon name="x" size={13} />
+              </button>
+            )}
+          </span>
+        ))}
+      </div>
       {!editable ? null : !adding ? (
         <>
           <button className="lb-chip add" onClick={() => setAdding(true)}>
@@ -142,6 +144,18 @@ export function Lightbox() {
   const url = useMediaUrl(id);
   const n = lb ? lb.ids.length : 0;
   const [facesOn, setFacesOn] = useState(false);
+  // высота нижней строки (год, «На фото», вопросы) растёт с числом отметок — фото ужимается над ней
+  const boxRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const hasBar = !!item && (item.kind === 'photo' || item.kind === 'video');
+  useEffect(() => {
+    const bar = barRef.current;
+    const box = boxRef.current;
+    if (!bar || !box) return;
+    const ro = new ResizeObserver(() => box.style.setProperty('--lb-bar', `${Math.ceil(bar.getBoundingClientRect().height)}px`));
+    ro.observe(bar);
+    return () => ro.disconnect();
+  }, [hasBar, !!lb]);
   const ownerId = useMemo(() => (persons && item ? mediaOwnerId(persons, item.id) : null), [persons, item]);
   // распознавание — только там, где можно менять отметки
   const scan = useFaceScan(item, !!item && acc.canEditMediaItem(item, ownerId), !!lb?.scan);
@@ -168,7 +182,7 @@ export function Lightbox() {
   const canDeleteHere = !!lb.ownerId && (viewerOwns ? acc.canDeleteMedia(lb.ownerId) : acc.canEditPerson(lb.ownerId));
 
   return (
-    <div className="lightbox open" onClick={e => e.target === e.currentTarget && setLb(null)}>
+    <div className="lightbox open" ref={boxRef} onClick={e => e.target === e.currentTarget && setLb(null)}>
       {item.kind === 'photo' && url && (
         <div className={'lb-photo' + (facesOn ? ' faces-on' : '')} onClick={e => {
           e.stopPropagation();
@@ -216,7 +230,7 @@ export function Lightbox() {
       )}
       <div className="lb-count">{n > 1 ? `${lb.index + 1} из ${n}` : ''}</div>
       {(item.kind === 'photo' || item.kind === 'video') && (
-        <div className="lb-bottom">
+        <div className="lb-bottom" ref={barRef}>
           {item.kind === 'photo' && <FaceQuestions item={item} scan={scan} />}
           <PhotoPeople
             item={item}
