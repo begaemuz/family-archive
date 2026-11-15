@@ -8,6 +8,8 @@ import {
   BookOpen,
   BookOpenText,
   Calendar,
+  Check,
+  ScanFace,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -95,6 +97,8 @@ const ICONS: Record<string, LucideIcon> = {
   menu: Menu,
   archive: Archive,
   calendar: Calendar,
+  check: Check,
+  'scan-face': ScanFace,
   shield: ShieldCheck,
 };
 

@@ -1,3 +1,4 @@
+import { suggestFaces } from '../../flows/faceFlows';
 import { useAccess } from '../../hooks/useAccess';
 import { useMemo } from 'react';
 import { formatSize } from '../../archive/media';
@@ -40,7 +41,7 @@ function Tile({ entry, ownerName, onOpen, onDelete }: { entry: PersonMedia; owne
   const url = useMediaUrl(item.id);
   const tagCount = item.people.length;
   return (
-    <div className={'album-item kind-' + item.kind + (own ? '' : ' tagged')} onClick={onOpen} title={(item.date ? item.date + ' · ' : '') + (own ? item.name : `Отмечен(а) на фото из альбома: ${ownerName}`)}>
+    <div className={'album-item kind-' + item.kind + (own ? '' : ' tagged')} onClick={onOpen} title={(item.year ?? item.date ? `${item.year ?? item.date} · ` : '') + (own ? item.name : `Отмечен(а) на фото из альбома: ${ownerName}`)}>
       {item.kind === 'photo' && url && <img src={url} alt="" loading="lazy" draggable={false} />}
       {item.kind === 'video' && url && <video src={url} preload="metadata" muted playsInline />}
       {item.kind === 'video' && (
@@ -48,7 +49,7 @@ function Tile({ entry, ownerName, onOpen, onDelete }: { entry: PersonMedia; owne
           <Icon name="play" size={18} />
         </span>
       )}
-      {item.date && <span className="date-badge">{item.date}</span>}
+      {(item.year || item.date) && <span className="date-badge">{item.year ?? item.date}</span>}
       {/* чужое фото, где человек отмечен, — или своё, на котором отмечены другие */}
       {!own ? (
         <span className="tag-badge" title={`Из альбома: ${ownerName}`}>
@@ -118,6 +119,8 @@ export function MediaTab({ person: p }: { person: Person }) {
     ready.forEach(r => st.addMedia(r.item, r.blob));
     st.updatePerson(p.id, { media: [...(st.data!.persons.find(x => x.id === p.id)?.media ?? []), ...ready.map(r => r.item.id)] });
     useUi.getState().showToast(`Добавлено: ${ready.length}`);
+    const photos = ready.filter(r => r.item.kind === 'photo').map(r => r.item.id);
+    if (photos.length) suggestFaces(photos, p.id);
   };
 
   return (

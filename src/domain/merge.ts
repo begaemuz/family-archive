@@ -190,14 +190,14 @@ export function planMerge(mine: ArchiveData, theirs: ArchiveData): MergePlan {
       continue;
     }
     const u = member(it.updatedBy, it.updatedAt);
-    if (!u || (mm.date === it.date && JSON.stringify(mm.people) === JSON.stringify(it.people))) continue;
+    if (!u || (mm.date === it.date && mm.year === it.year && JSON.stringify(mm.people) === JSON.stringify(it.people) && JSON.stringify(mm.notPeople ?? []) === JSON.stringify(it.notPeople ?? []))) continue;
     authors.add(u.id);
     const ow = ownerIn(mine, it.id);
     if (!(u.can.change && inScope(u, ow, 'theirs'))) {
       rejected.push({ title: it.name, by: u.id, reason: 'нет права менять этот файл' });
       continue;
     }
-    items.push({ key: 'm~' + it.id, entity: 'media', action: 'update', id: it.id, title: `${it.name}: дата и отметки людей`, by: u.id, conflict: changedByOwner(mm, u) });
+    items.push({ key: 'm~' + it.id, entity: 'media', action: 'update', id: it.id, title: `${it.name}: год и отметки людей`, by: u.id, conflict: changedByOwner(mm, u) });
   }
 
   /* --- истории --- */
@@ -313,7 +313,7 @@ export function applyMerge(mine: ArchiveData, theirs: ArchiveData, plan: MergePl
     }
     if (it.entity === 'media') {
       const i = d.media.findIndex(m => m.id === it.id);
-      if (i >= 0) d.media[i] = { ...d.media[i], people: [...tm.get(it.id)!.people], date: tm.get(it.id)!.date, updatedAt: now, updatedBy: it.by };
+      if (i >= 0) d.media[i] = { ...d.media[i], people: [...tm.get(it.id)!.people], date: tm.get(it.id)!.date, year: tm.get(it.id)!.year, notPeople: tm.get(it.id)!.notPeople, updatedAt: now, updatedBy: it.by };
     }
     if (it.entity === 'story') {
       const i = d.stories.findIndex(s => s.id === it.id);

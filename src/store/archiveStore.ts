@@ -54,6 +54,10 @@ interface ArchiveState {
   setMediaPeople(mediaId: string, people: string[]): void;
   /** когда снято — свободный текст */
   setMediaDate(mediaId: string, date: string): void;
+  /** год снимка (null — не указан); старый текст даты при этом очищается */
+  setMediaYear(mediaId: string, year: number | null): void;
+  /** распознавание лиц: «нет, это не он» — больше не предлагать этого человека на этом фото */
+  rejectFaceMatch(mediaId: string, personId: string): void;
 
   // истории
   saveStory(story: Story): void;
@@ -304,6 +308,20 @@ export const useArchive = create<ArchiveState>((set, get) => ({
     get().apply(d => {
       d.media = d.media.map(x => (x.id === mediaId ? { ...x, date: v } : x));
     }, { history: [{ action: 'update', entity: 'media', id: mediaId, summary: v ? `Дата фото: ${v}` : 'Дата фото убрана' }] });
+  },
+
+  setMediaYear(mediaId, year) {
+    const m = get().data?.media.find(x => x.id === mediaId);
+    if (!m || (m.year === year && !m.date)) return;
+    get().apply(d => {
+      d.media = d.media.map(x => (x.id === mediaId ? { ...x, year, date: '' } : x));
+    }, { history: [{ action: 'update', entity: 'media', id: mediaId, summary: year ? `Год фото: ${year}` : 'Год фото убран' }] });
+  },
+
+  rejectFaceMatch(mediaId, personId) {
+    get().apply(d => {
+      d.media = d.media.map(x => (x.id === mediaId ? { ...x, notPeople: [...new Set([...(x.notPeople ?? []), personId])] } : x));
+    });
   },
 
   deleteMedia(id) {

@@ -1,4 +1,5 @@
 /// <reference types="vitest" />
+import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { viteSingleFile } from 'vite-plugin-singlefile';
@@ -52,6 +53,8 @@ export default defineConfig(({ mode }) => {
   return {
     // относительные пути — сайт работает и в подпапке GitHub Pages, и с диска
     base: './',
+    // в автономном файле распознавание лиц недоступно (модели с диска не загрузить) — движок не вшиваем
+    resolve: single ? { alias: { '@vladmandic/face-api': fileURLToPath(new URL('./src/faces/unavailable.ts', import.meta.url)) } } : undefined,
     plugins: [
       react(),
       cspPlugin(single),
@@ -85,7 +88,8 @@ export default defineConfig(({ mode }) => {
                 navigateFallbackDenylist: [/family-archive\.html$/, /map\.html/],
                 // страница карты открывается с ключом в адресе (?k=…) — для кэша это та же map.html
                 ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^k$/],
-                runtimeCaching: [],
+                // модели распознавания лиц (~7 МБ) — не в предзагрузке, а в кэш при первом использовании; дальше работают офлайн
+                runtimeCaching: [{ urlPattern: /\/models\/[^/]+\.(bin|json)$/, handler: 'CacheFirst', options: { cacheName: 'face-models' } }],
               },
             }),
           ]),

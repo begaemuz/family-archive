@@ -1,0 +1,226 @@
+/* ================= ВЫБОР ГОДА ================= */
+.yp {
+    position: relative;
+    display: inline-flex;
+}
+
+.yp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.yp-btn.readonly {
+    color: var(--muted);
+    font-size: 13.5px;
+}
+
+.yp-pop {
+    position: absolute;
+    left: 0;
+    z-index: 50;
+    width: 272px;
+    padding: 10px;
+    border-radius: 16px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    color: var(--text);
+    animation: yp-in .14s ease;
+}
+
+.yp-pop.down {
+    top: calc(100% + 8px);
+}
+
+.yp-pop.up {
+    bottom: calc(100% + 10px);
+}
+
+@keyframes yp-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px) scale(.98);
+    }
+}
+
+.yp-head {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.yp-pop .yp-title {
+    flex: 1;
+    justify-content: center;
+    gap: 6px;
+    height: 34px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--text);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.yp-pop .yp-nav {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--muted);
+}
+
+.yp-pop .yp-title:hover,
+.yp-pop .yp-nav:hover:not(:disabled) {
+    background: var(--panel-3);
+    color: var(--text);
+}
+
+.yp-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.yp-grid.decades {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.yp-pop .yp-cell {
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.yp-pop .yp-cell:hover:not(:disabled) {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.yp-pop .yp-cell.out {
+    color: var(--faint);
+}
+
+.yp-pop .yp-cell.today {
+    border-color: var(--border-strong);
+}
+
+.yp-pop .yp-cell.on {
+    background: linear-gradient(135deg, var(--accent), #8a6bff);
+    color: #fff;
+    border-color: transparent;
+}
+
+.yp-pop .yp-cell:disabled {
+    opacity: .3;
+}
+
+.yp-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
+
+.yp-pop .yp-foot button {
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--muted);
+    border: 0;
+}
+
+.yp-pop .yp-foot button:hover {
+    background: var(--panel-3);
+    color: var(--text);
+}
+
+.yp-pop .yp-foot button.danger {
+    color: var(--danger);
+}
+
+/* в тёмной строке просмотра фото — кнопка под стиль строки */
+.lightbox .lb-people .yp-btn {
+    background: rgba(255, 255, 255, .1);
+    border: 1px solid rgba(255, 255, 255, .22);
+    color: #fff;
+}
+
+.lightbox .lb-people .yp-btn:not(.has) {
+    color: rgba(255, 255, 255, .7);
+}
+
+.lightbox .lb-people .yp-btn.readonly {
+    background: transparent;
+    border-color: transparent;
+}
+
+/* ячейки внутри всплывающей сетки — не «пилюли» строки, а обычные кнопки сетки */
+.lightbox .lb-people .yp-pop button {
+    position: static;
+    width: auto;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text);
+}
+
+.lightbox .lb-people .yp-pop .yp-cell {
+    height: 40px;
+}
+
+.lightbox .lb-people .yp-pop .yp-cell.out {
+    color: var(--faint);
+}
+
+.lightbox .lb-people .yp-pop .yp-cell:hover:not(:disabled),
+.lightbox .lb-people .yp-pop .yp-title:hover,
+.lightbox .lb-people .yp-pop .yp-nav:hover:not(:disabled) {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.lightbox .lb-people .yp-pop .yp-cell.on {
+    background: linear-gradient(135deg, var(--accent), #8a6bff);
+    color: #fff;
+}
+
+.lightbox .lb-people .yp-pop .yp-nav {
+    width: 34px;
+    height: 34px;
+    color: var(--muted);
+}
+
+.lightbox .lb-people .yp-pop .yp-foot button {
+    height: 32px;
+    color: var(--muted);
+}
+
+.lightbox .lb-people .yp-pop .yp-foot button.danger {
+    color: var(--danger);
+}

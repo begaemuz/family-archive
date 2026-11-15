@@ -1,46 +1,33 @@
 import { useAccess } from '../../hooks/useAccess';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { mediaOwnerId } from '../../domain/mediaPeople';
-import { fullName } from '../../domain/people';
+import { birthYear, fullName } from '../../domain/people';
+import { YearPicker } from '../../ui/YearPicker';
 import type { MediaItem } from '../../domain/types';
 import { askDeleteMedia, viewPersonFlow } from '../../flows/personFlows';
 import { useMediaUrl } from '../../hooks/useMediaUrl';
 import { useArchive } from '../../store/archiveStore';
 import { useUi } from '../../store/uiStore';
 import { Icon } from '../../ui/Icon';
+import { FaceBoxes, FaceQuestions, FaceScanButton, useFaceScan, type FaceScan } from './LightboxFaces';
 
-/** «Когда:» — примерная дата снимка свободным текстом; сохраняется при уходе с поля или Enter. */
-function MediaDate({ item, readOnly }: { item: MediaItem; readOnly: boolean }) {
-  const [v, setV] = useState(item.date);
-  useEffect(() => setV(item.date), [item.id, item.date]);
-  // значение берём прямо из поля — не зависим от того, успел ли React применить последний ввод
-  const save = (value: string) => useArchive.getState().setMediaDate(item.id, value);
+/** Год снимка — выбор из сетки годов. Без выбранного года пикер открывается на молодости владельца фото. */
+function MediaYear({ item, readOnly, hint }: { item: MediaItem; readOnly: boolean; hint: number | null }) {
   return (
-    <label className="lb-date" title="Когда снято — можно примерно: «лето 1985», «1950-е»">
-      <Icon name="calendar" size={15} />
-      <input
-        value={v}
-        readOnly={readOnly}
-        maxLength={60}
-        placeholder={readOnly ? 'Дата не указана' : 'Когда? Например: лето 1985'}
-        onChange={e => setV(e.target.value)}
-        onBlur={e => save(e.currentTarget.value)}
-        onKeyDown={e => {
-          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-          if (e.key === 'Escape') {
-            e.stopPropagation();
-            setV(item.date);
-            (e.target as HTMLInputElement).blur();
-          }
-        }}
-      />
-    </label>
+    <YearPicker
+      value={item.year}
+      hint={hint}
+      readOnly={readOnly}
+      placement="up"
+      placeholder={item.date || 'Год снимка'}
+      onChange={y => useArchive.getState().setMediaYear(item.id, y)}
+    />
   );
 }
 
 /** «На фото:» — владелец альбома и отмеченные люди; можно отметить ещё кого-то.
     Отмеченным фото/видео показывается у них во вкладке «Медиа». */
-function PhotoPeople({ item, onOpenPerson }: { item: MediaItem; onOpenPerson(id: string): void }) {
+function PhotoPeople({ item, scan, onOpenPerson }: { item: MediaItem; scan: FaceScan; onOpenPerson(id: string): void }) {
   const persons = useArchive(s => s.data!.persons);
   const acc = useAccess();
   const [adding, setAdding] = useState(false);
@@ -72,7 +59,7 @@ function PhotoPeople({ item, onOpenPerson }: { item: MediaItem; onOpenPerson(id:
 
   return (
     <div className="lb-people" onClick={e => e.stopPropagation()}>
-      <MediaDate item={item} readOnly={!editable} />
+      <MediaYear item={item} readOnly={!editable} hint={owner && birthYear(owner) ? birthYear(owner)! + 20 : null} />
       <span className="lb-sep" />
       <span className="lb-people-title">
         <Icon name="users" size={15} /> На фото:
@@ -95,9 +82,12 @@ function PhotoPeople({ item, onOpenPerson }: { item: MediaItem; onOpenPerson(id:
         </span>
       ))}
       {!editable ? null : !adding ? (
-        <button className="lb-chip add" onClick={() => setAdding(true)}>
-          <Icon name="plus" size={14} /> Отметить
-        </button>
+        <>
+          <button className="lb-chip add" onClick={() => setAdding(true)}>
+            <Icon name="plus" size={14} /> Отметить
+          </button>
+          {item.kind === 'photo' && <FaceScanButton scan={scan} />}
+        </>
       ) : (
         <div className="lb-tag-picker">
           <input
@@ -151,6 +141,9 @@ export function Lightbox() {
   const item = media?.find(m => m.id === id);
   const url = useMediaUrl(id);
   const n = lb ? lb.ids.length : 0;
+  const ownerId = useMemo(() => (persons && item ? mediaOwnerId(persons, item.id) : null), [persons, item]);
+  // распознавание — только там, где можно менять отметки
+  const scan = useFaceScan(item, !!item && acc.canEditMediaItem(item, ownerId), !!lb?.scan);
   function step(d: number) {
     if (!lb || !n) return;
     setLb({ ...lb, index: (lb.index + d + n) % n });
@@ -175,7 +168,12 @@ export function Lightbox() {
 
   return (
     <div className="lightbox open" onClick={e => e.target === e.currentTarget && setLb(null)}>
-      {item.kind === 'photo' && url && <img src={url} alt={item.name} />}
+      {item.kind === 'photo' && url && (
+        <div className="lb-photo" onClick={e => e.stopPropagation()}>
+          <img src={url} alt={item.name} />
+          <FaceBoxes scan={scan} />
+        </div>
+      )}
       {item.kind === 'video' && url && <video key={id} src={url} controls autoPlay playsInline className="lb-media" />}
       {item.kind === 'audio' && url && (
         <div className="lb-audio">
@@ -213,13 +211,17 @@ export function Lightbox() {
       )}
       <div className="lb-count">{n > 1 ? `${lb.index + 1} из ${n}` : ''}</div>
       {(item.kind === 'photo' || item.kind === 'video') && (
-        <PhotoPeople
-          item={item}
-          onOpenPerson={pid => {
-            setLb(null);
-            viewPersonFlow(pid);
-          }}
-        />
+        <div className="lb-bottom">
+          {item.kind === 'photo' && <FaceQuestions item={item} scan={scan} />}
+          <PhotoPeople
+            item={item}
+            scan={scan}
+            onOpenPerson={pid => {
+              setLb(null);
+              viewPersonFlow(pid);
+            }}
+          />
+        </div>
       )}
     </div>
   );

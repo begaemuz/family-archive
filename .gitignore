@@ -16,3 +16,6 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+
+# модели распознавания лиц копируются из node_modules (scripts/copy-face-models.mjs)
+public/models/

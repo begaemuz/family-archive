@@ -55,6 +55,8 @@ export interface LightboxState {
   ids: string[];
   index: number;
   ownerId: string | null;
+  /** сразу поискать лица (фото только что добавили) */
+  scan?: boolean;
 }
 
 export interface View {

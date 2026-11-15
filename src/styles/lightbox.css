@@ -265,3 +265,164 @@
         width: min(260px, calc(100vw - 80px));
     }
 }
+
+/* ---------- лица на фото ---------- */
+.lb-photo {
+    position: relative;
+    display: inline-flex;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.lb-photo img {
+    max-width: calc(100vw - 144px);
+    max-height: calc(100vh - 160px);
+    object-fit: contain;
+}
+
+.lb-faces {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.lb-face {
+    position: absolute;
+    border: 2px dashed rgba(255, 255, 255, .45);
+    border-radius: 12px;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.lb-face.known {
+    border: 2px solid rgba(255, 255, 255, .85);
+}
+
+.lb-face.suggest {
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.lb-face.hot {
+    border-color: #fff;
+    box-shadow: 0 0 0 4px var(--accent);
+}
+
+.lb-face-name {
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 6px);
+    transform: translateX(-50%);
+    white-space: nowrap;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(5, 7, 10, .75);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.lb-face.suggest .lb-face-name {
+    background: var(--accent);
+}
+
+.lb-bottom {
+    position: absolute;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+}
+
+.lb-bottom .lb-people {
+    position: static;
+    transform: none;
+    max-width: 100%;
+}
+
+.lb-asks {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+}
+
+.lb-ask {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 6px 6px 14px;
+    border-radius: 22px;
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    font-size: 14px;
+    animation: fade .15s ease;
+}
+
+.lb-ask > svg {
+    color: var(--accent);
+    flex: none;
+}
+
+.lightbox .lb-ask button {
+    position: static;
+    width: auto;
+    height: 32px;
+    padding: 0 14px;
+    gap: 4px;
+    border-radius: 999px;
+    font-size: 13.5px;
+    font-weight: 600;
+    box-shadow: none;
+}
+
+.lightbox .lb-ask .lb-ask-yes {
+    background: linear-gradient(135deg, var(--accent), #8a6bff);
+    color: #fff;
+}
+
+.lightbox .lb-ask .lb-ask-no {
+    background: var(--panel-3);
+    color: var(--text);
+}
+
+.lightbox .lb-people .lb-chip.scan {
+    background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.lb-scan-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, .75);
+}
+
+.lb-spin {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, .3);
+    border-top-color: #fff;
+    animation: lb-spin .8s linear infinite;
+}
+
+@keyframes lb-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 700px) {
+    .lb-photo img {
+        max-width: calc(100vw - 24px);
+        max-height: calc(100vh - 200px);
+    }
+}

@@ -191,6 +191,8 @@ export function normalizeMedia(raw: unknown): MediaItem | null {
     createdAt: num(m.createdAt, Date.now()),
     people: [...new Set(ids(m.people))],
     date: str(m.date, 60),
+    year: mediaYear(m.year, m.date),
+    ...(ids(m.notPeople).length ? { notPeople: [...new Set(ids(m.notPeople))] } : null),
     ...(typeof m.updatedAt === 'number' ? { updatedAt: m.updatedAt } : null),
     ...stamps(m),
   };
@@ -211,6 +213,16 @@ export function normalizeStory(raw: unknown): Story | null {
     updatedAt: num(s.updatedAt, Date.now()),
     ...stamps(s),
   };
+}
+
+export const YEAR_MIN = 1850;
+/** Год снимка: число из поля year или год из старого текста («лето 1985» → 1985). */
+export function mediaYear(year: unknown, date: unknown): number | null {
+  const max = new Date().getFullYear() + 1;
+  if (typeof year === 'number' && Number.isInteger(year) && year >= YEAR_MIN && year <= max) return year;
+  const m = typeof date === 'string' ? date.match(/(?:^|\D)(1[89]\d\d|20\d\d)(?:\D|$)/) : null;
+  const y = m ? Number(m[1]) : NaN;
+  return y >= YEAR_MIN && y <= max ? y : null;
 }
 
 /** «кто создал / изменил» — только корректные id */

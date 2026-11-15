@@ -8,7 +8,7 @@ function sample() {
   const husband = { ...createPerson(1, 0, 0), firstName: 'Андрей' };
   const wife = { ...createPerson(2, 300, 0), firstName: 'Альбина' };
   const son = { ...createPerson(3, 150, 300), firstName: 'Сергей' };
-  const photo: MediaItem = { id: newId(), kind: 'photo', mime: 'image/jpeg', name: 'свадьба.jpg', size: 10, sha256: '', createdAt: 1, people: [wife.id], date: '' };
+  const photo: MediaItem = { id: newId(), kind: 'photo', mime: 'image/jpeg', name: 'свадьба.jpg', size: 10, sha256: '', createdAt: 1, people: [wife.id], date: '', year: null };
   husband.media = [photo.id];
   const data: ArchiveData = { meta: createMeta('Тест', ''), persons: [husband, wife, son], relations: [], media: [photo], stories: [], history: [], access: { users: [ownerUser()] }, deleted: [] };
   return { data, husband, wife, son, photo };

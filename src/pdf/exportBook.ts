@@ -188,7 +188,7 @@ export async function buildBook(data: ArchiveData, onStep: (s: string) => void):
     for (const m of albumPhotos.slice(0, 12)) {
       const b = mediaRegistry.get(m.id);
       const j = b ? await toJpeg(b, 700) : null;
-      if (j) albumImgs.push({ url: j.url, date: m.date });
+      if (j) albumImgs.push({ url: j.url, date: m.year ? String(m.year) : m.date });
     }
     const others = mine.filter(m => m.kind !== 'photo');
     const videos = others.filter(m => m.kind === 'video').length;
