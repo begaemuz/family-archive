@@ -1,17 +1,11 @@
-import { useMemo } from 'react';
 import type { KinGroup } from '../../domain/kinship';
 import { fullName, genderClass, yearLine } from '../../domain/people';
 import type { Person } from '../../domain/types';
 import { askDeleteRelation, viewPersonFlow } from '../../flows/personFlows';
-import { useArchive } from '../../store/archiveStore';
-import { useUi } from '../../store/uiStore';
 import { Icon } from '../../ui/Icon';
 import { Avatar } from './PersonView';
 
 export function RelationsTab({ person: p, groups }: { person: Person; groups: KinGroup[] }) {
-  // селектор возвращает сам массив (стабильная ссылка), фильтруем вне его — иначе бесконечный перерендер
-  const all = useArchive(s => s.data!.stories);
-  const stories = useMemo(() => all.filter(st => st.personIds.includes(p.id)), [all, p.id]);
   return (
     <div className="sp-body">
       {groups.map(g => (
@@ -52,24 +46,6 @@ export function RelationsTab({ person: p, groups }: { person: Person; groups: Ki
           Связей пока нет.
           <br />
           Наведите на человека на холсте и нажмите «＋» или потяните к другому человеку.
-        </div>
-      )}
-      {stories.length > 0 && (
-        <div className="rel-group">
-          <div className="sp-section-title">
-            Упоминается в историях <span className="rel-n">{stories.length}</span>
-          </div>
-          {stories.map(s => (
-            <div className="rel-item" key={s.id} onClick={() => useUi.getState().setStoriesOpen(true)}>
-              <div className="rel-ava">
-                <Icon name="story" />
-              </div>
-              <div className="rel-meta">
-                <b>{s.title || 'Без названия'}</b>
-                <small>{s.date || 'История'}</small>
-              </div>
-            </div>
-          ))}
         </div>
       )}
       {groups.length > 0 && (

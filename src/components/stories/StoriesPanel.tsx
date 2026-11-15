@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { newId } from '../../domain/normalize';
 import { fullName } from '../../domain/people';
 import type { MediaItem, Story } from '../../domain/types';
@@ -19,6 +19,14 @@ export function StoriesPanel() {
   const [editing, setEditing] = useState<Story | null>(null);
   const [viewId, setViewId] = useState<string | null>(null);
   const viewed = stories.find(s => s.id === viewId) ?? null;
+  // открыли конкретную историю (например, из биографии человека)
+  const storyId = useUi(s => s.storyId);
+  useEffect(() => {
+    if (!storyId) return;
+    setEditing(null);
+    setViewId(storyId);
+    useUi.setState({ storyId: null });
+  }, [storyId]);
   const sorted = useMemo(() => stories.slice().sort((a, b) => b.updatedAt - a.updatedAt), [stories]);
 
   return (

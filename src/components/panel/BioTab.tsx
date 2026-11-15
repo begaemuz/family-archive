@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { normBio } from '../../domain/normalize';
 import type { BioSection, Person } from '../../domain/types';
 import { useArchive } from '../../store/archiveStore';
@@ -9,6 +9,8 @@ import { Icon } from '../../ui/Icon';
 export function BioTab({ person: p }: { person: Person }) {
   const [draft, setDraft] = useState<BioSection[] | null>(null);
   const confirm = useUi(s => s.confirm);
+  const allStories = useArchive(s => s.data!.stories);
+  const stories = useMemo(() => allStories.filter(s => s.personIds.includes(p.id)), [allStories, p.id]);
 
   if (draft) {
     const patch = (i: number, v: Partial<BioSection>) => setDraft(d => d!.map((b, j) => (j === i ? { ...b, ...v } : b)));
@@ -88,6 +90,21 @@ export function BioTab({ person: p }: { person: Person }) {
 
   return (
     <div className="sp-body">
+      {stories.length > 0 && (
+        <div className="bio-stories">
+          <div className="sp-section-title">
+            Истории <span className="rel-n">{stories.length}</span>
+          </div>
+          {stories.map(s => (
+            <button key={s.id} className="story-item" onClick={() => useUi.getState().openStory(s.id)}>
+              <b>{s.title || 'Без названия'}</b>
+              {s.date && <small>{s.date}</small>}
+              {s.text && <span>{s.text.slice(0, 160)}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      {stories.length > 0 && p.bio.length > 0 && <div className="sp-section-title">Биография</div>}
       {p.bio.length ? (
         <>
           <div className="bio-toolbar">

@@ -768,3 +768,122 @@ textarea.tall {
     gap: 5px;
     white-space: nowrap;
 }
+
+/* ---------- медиа по разделам ---------- */
+.media-section + .media-section {
+    margin-top: 20px;
+}
+
+.media-section .sp-section-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.album.album-video {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.album.album-video .album-item,
+.album.album-video .album-add {
+    aspect-ratio: 16 / 10;
+}
+
+.audio-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.audio-row {
+    padding: 8px 8px 10px 10px;
+    border-radius: var(--r-sm);
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+}
+
+.audio-row-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.audio-row-meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.audio-row-meta b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.audio-row-meta small {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.audio-row audio {
+    display: block;
+    width: 100%;
+    height: 36px;
+    margin-top: 8px;
+}
+
+.audio-add {
+    width: 100%;
+    justify-content: center;
+    border-style: dashed;
+    background: transparent;
+    color: var(--muted);
+}
+
+.audio-add:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+/* ---------- истории в биографии ---------- */
+.bio-stories {
+    margin-bottom: 18px;
+}
+
+/* ---------- поля пароля: отступы между ними ---------- */
+.pw-modal .pw-wrap + .pw-wrap {
+    margin-top: 14px;
+}
+
+/* вкладки не помещаются (узкий экран) — справа затухание, намекающее на прокрутку */
+.tabs.overflow {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+}
+
+/* текст карточки истории переносится, а не растягивает панель */
+.story-item {
+    white-space: normal;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.story-item b,
+.story-item span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+/* колонки альбома строго равные — длинная подпись «Добавить видео» не должна раздвигать сетку */
+.album {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.album-add {
+    min-width: 0;
+    white-space: normal;
+    text-align: center;
+}

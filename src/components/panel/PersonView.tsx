@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { relationGroups } from '../../domain/kinship';
 import { ageText, fullName, genderClass, initials, yearLine } from '../../domain/people';
 import type { Person } from '../../domain/types';
@@ -26,14 +26,32 @@ export function PersonView({ person: p }: { person: Person }) {
   const relations = useArchive(s => s.data!.relations);
   const groups = useMemo(() => relationGroups(p, persons, relations), [p, persons, relations]);
   const relCount = groups.reduce((s, g) => s + g.items.length, 0);
+  const stories = useArchive(s => s.data!.stories);
+  const storyCount = useMemo(() => stories.filter(s => s.personIds.includes(p.id)).length, [stories, p.id]);
   const chips = [p.gender, ageText(p), p.occupation].filter(Boolean);
+
+  // на узком экране вкладки прокручиваются: выбранную держим в поле зрения, справа — затухание-подсказка
+  const tabsRef = useRef<HTMLElement>(null);
+  const [tabsOverflow, setTabsOverflow] = useState(false);
+  const checkTabs = () => {
+    const el = tabsRef.current;
+    if (el) setTabsOverflow(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+  useEffect(() => {
+    tabsRef.current?.querySelector<HTMLElement>('.tab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    checkTabs();
+  }, [tab, p.id]);
+  useEffect(() => {
+    window.addEventListener('resize', checkTabs);
+    return () => window.removeEventListener('resize', checkTabs);
+  }, []);
 
   const tabs: [PanelTab, string, number | null][] = [
     ['info', 'Основное', null],
     ['media', 'Медиа', p.media.length || null],
     ['documents', 'Документы', p.documents.length || null],
     ['relations', 'Связи', relCount || null],
-    ['bio', 'Биография', p.bio.length || null],
+    ['bio', 'Биография', p.bio.length + storyCount || null],
   ];
 
   return (
@@ -69,7 +87,7 @@ export function PersonView({ person: p }: { person: Person }) {
           </div>
         </div>
       </div>
-      <nav className="tabs" role="tablist">
+      <nav className={'tabs' + (tabsOverflow ? ' overflow' : '')} role="tablist" ref={tabsRef} onScroll={checkTabs}>
         {tabs.map(([key, label, count]) => (
           <button key={key} className={'tab' + (tab === key ? ' active' : '')} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>
             {label}

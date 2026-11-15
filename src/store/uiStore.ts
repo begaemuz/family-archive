@@ -71,6 +71,8 @@ interface UiState {
 
   panel: { open: boolean; personId: string | null; tab: PanelTab; form: FormContext | null; formDirty: boolean };
   storiesOpen: boolean;
+  /** какую историю показать при открытии панели историй */
+  storyId: string | null;
 
   toast: { text: string; key: number } | null;
   confirmReq: ConfirmRequest | null;
@@ -91,6 +93,8 @@ interface UiState {
   setTab(t: PanelTab): void;
   closePanel(): void;
   setStoriesOpen(v: boolean): void;
+  /** открыть панель историй сразу на конкретной истории */
+  openStory(id: string): void;
 
   showToast(text: string): void;
   confirm(o: ConfirmOptions): Promise<boolean | 'alt'>;
@@ -113,6 +117,7 @@ export const useUi = create<UiState>((set, get) => ({
   selectedId: null,
   panel: { open: false, personId: null, tab: 'info', form: null, formDirty: false },
   storiesOpen: false,
+  storyId: null,
   toast: null,
   confirmReq: null,
   cropReq: null,
@@ -153,7 +158,10 @@ export const useUi = create<UiState>((set, get) => ({
     set(s => ({ panel: { ...s.panel, open: false, personId: null, form: null, formDirty: false } }));
   },
   setStoriesOpen(storiesOpen) {
-    set(s => ({ storiesOpen, panel: storiesOpen ? { ...s.panel, open: false, form: null } : s.panel }));
+    set(s => ({ storiesOpen, storyId: null, panel: storiesOpen ? { ...s.panel, open: false, form: null } : s.panel }));
+  },
+  openStory(id) {
+    set(s => ({ storiesOpen: true, storyId: id, panel: { ...s.panel, open: false, form: null } }));
   },
 
   showToast(text) {
