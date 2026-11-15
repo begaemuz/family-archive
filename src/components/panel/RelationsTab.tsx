@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { KinGroup } from '../../domain/kinship';
 import { fullName, genderClass, yearLine } from '../../domain/people';
 import type { Person } from '../../domain/types';
@@ -8,7 +9,9 @@ import { Icon } from '../../ui/Icon';
 import { Avatar } from './PersonView';
 
 export function RelationsTab({ person: p, groups }: { person: Person; groups: KinGroup[] }) {
-  const stories = useArchive(s => s.data!.stories.filter(st => st.personIds.includes(p.id)));
+  // селектор возвращает сам массив (стабильная ссылка), фильтруем вне его — иначе бесконечный перерендер
+  const all = useArchive(s => s.data!.stories);
+  const stories = useMemo(() => all.filter(st => st.personIds.includes(p.id)), [all, p.id]);
   return (
     <div className="sp-body">
       {groups.map(g => (

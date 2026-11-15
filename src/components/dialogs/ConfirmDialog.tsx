@@ -24,15 +24,29 @@ export function ConfirmDialog() {
           <h2 id="confirmTitle">{req.title}</h2>
           {req.body && <p>{req.body}</p>}
         </div>
-        <div className="modal-footer">
-          <button ref={cancelRef} className="ghost" onClick={() => resolve(false)}>
-            Отмена
-          </button>
-          {req.alt && <button onClick={() => resolve('alt')}>{req.alt}</button>}
-          <button className={danger ? 'danger-solid' : 'primary'} onClick={() => resolve(true)}>
-            {req.ok || 'Удалить'}
-          </button>
-        </div>
+        {req.alt ? (
+          // три варианта — столбцом на всю ширину: рекомендуемое действие сверху, отмена внизу
+          <div className="modal-footer confirm-actions stacked">
+            <button className="primary" onClick={() => resolve('alt')}>
+              {req.alt}
+            </button>
+            <button className={danger ? 'ghost danger' : ''} onClick={() => resolve(true)}>
+              {req.ok || 'Удалить'}
+            </button>
+            <button ref={cancelRef} className="ghost" onClick={() => resolve(false)}>
+              Отмена
+            </button>
+          </div>
+        ) : (
+          <div className="modal-footer confirm-actions">
+            <button ref={cancelRef} className="ghost" onClick={() => resolve(false)}>
+              Отмена
+            </button>
+            <button className={danger ? 'danger-solid' : 'primary'} onClick={() => resolve(true)}>
+              {req.ok || 'Удалить'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

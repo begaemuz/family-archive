@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { canWriteFiles } from '../../archive/fileAccess';
 import { useArchive } from '../../store/archiveStore';
 import { useSession } from '../../store/sessionStore';
@@ -25,10 +26,10 @@ export function ArchiveMenu() {
   const leave = async (): Promise<boolean> => {
     if (useArchive.getState().status === 'saved') return true;
     const r = await useUi.getState().confirm({
-      title: 'Закрыть без сохранения?',
-      body: 'В архиве есть несохранённые изменения. Сохраните его, чтобы они не пропали.',
+      title: 'Есть несохранённые изменения',
+      body: 'Сохраните архив, чтобы они не пропали.',
       ok: 'Закрыть без сохранения',
-      alt: 'Сохранить',
+      alt: 'Сохранить и закрыть',
       icon: 'save',
     });
     if (r === 'alt') return useSession.getState().save();
@@ -69,8 +70,10 @@ export function ArchiveMenu() {
           {item('logout', 'Закрыть архив', async () => (await leave()) && useSession.getState().closeArchive(), true)}
         </div>
       )}
-      {dialog === 'info' && <ArchiveInfoDialog onClose={() => setDialog(null)} />}
-      {dialog === 'password' && <ChangePasswordDialog onClose={() => setDialog(null)} />}
+      {/* окна — порталом в body: у шапки есть backdrop-filter, и position:fixed внутри неё
+          отсчитывался бы от шапки, а не от экрана (окно уезжало за край) */}
+      {dialog === 'info' && createPortal(<ArchiveInfoDialog onClose={() => setDialog(null)} />, document.body)}
+      {dialog === 'password' && createPortal(<ChangePasswordDialog onClose={() => setDialog(null)} />, document.body)}
     </div>
   );
 }

@@ -10,10 +10,12 @@ import { useArchive } from '../../store/archiveStore';
 import { useUi } from '../../store/uiStore';
 import { Icon } from '../../ui/Icon';
 
+const NO_STORIES: Story[] = [];
+
 /** Семейные истории: воспоминания, события, рассказы — с отмеченными людьми и файлами. */
 export function StoriesPanel() {
   const open = useUi(s => s.storiesOpen);
-  const stories = useArchive(s => s.data?.stories ?? []);
+  const stories = useArchive(s => s.data?.stories ?? NO_STORIES);
   const [editing, setEditing] = useState<Story | null>(null);
   const [viewId, setViewId] = useState<string | null>(null);
   const viewed = stories.find(s => s.id === viewId) ?? null;

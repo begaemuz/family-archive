@@ -46,6 +46,7 @@ interface SessionState {
 }
 
 const archive = () => useArchive.getState();
+let snapshotQueue: Promise<void> = Promise.resolve();
 const ui = () => useUi.getState();
 
 export const useSession = create<SessionState>((set, get) => ({
@@ -75,7 +76,7 @@ export const useSession = create<SessionState>((set, get) => ({
       archive().open(data, blobs);
       archive().setStatus('dirty');
       set({ sk, fileName: safeFileName(data.meta.title), handle: null, draft: null });
-      await clearDraft();
+      await get().autosaveDraft();
       ui().showToast('Архив создан. Не забудьте сохранить его — «Сохранить архив»');
     } finally {
       set({ busy: null });
@@ -101,7 +102,7 @@ export const useSession = create<SessionState>((set, get) => ({
       const { data, blobs, skipped } = await unpackArchive(payload);
       archive().open(data, blobs);
       set({ sk: { key, kdf }, fileName: p.handle?.name || p.file.name, handle: p.handle, pending: null, draft: null });
-      await clearDraft();
+      await get().autosaveDraft();
       ui().requestFit();
       ui().showToast(skipped ? `Архив открыт, но ${skipped} файл(ов) не прошли проверку и пропущены` : `Архив «${data.meta.title}» открыт`);
     } finally {
@@ -112,12 +113,12 @@ export const useSession = create<SessionState>((set, get) => ({
   async restore(password) {
     set({ busy: 'Восстанавливаю изменения…' });
     try {
-      const { data, blobs, sk, fileName } = await restoreDraft(password);
+      const { data, blobs, sk, fileName, saved, handle } = await restoreDraft(password);
       archive().open(data, blobs);
-      archive().setStatus('dirty');
-      set({ sk, fileName, handle: null, draft: null });
+      archive().setStatus(saved ? 'saved' : 'dirty');
+      set({ sk, fileName, handle, draft: null });
       ui().requestFit();
-      ui().showToast('Несохранённые изменения восстановлены — сохраните архив');
+      ui().showToast(saved ? `Архив «${data.meta.title}» открыт` : 'Несохранённые изменения восстановлены — сохраните архив');
     } finally {
       set({ busy: null });
     }
@@ -153,6 +154,7 @@ export const useSession = create<SessionState>((set, get) => ({
       archive().open(data, pi.blobs);
       archive().setStatus('dirty');
       set({ sk, fileName: safeFileName(data.meta.title), handle: null, pendingImport: null, draft: null });
+      await get().autosaveDraft();
       ui().requestFit();
       ui().showToast(`Перенесено людей: ${data.persons.length}${pi.missing ? `, не найдено фото: ${pi.missing}` : ''}. Сохраните архив`);
     } finally {
@@ -181,7 +183,7 @@ export const useSession = create<SessionState>((set, get) => ({
       if (archive().data === data) archive().setStatus('saved');
       else archive().setStatus('dirty');
       set({ handle: res.handle, fileName: res.fileName });
-      if (archive().data === data) await clearDraft();
+      await get().autosaveDraft(); // снимок помнит, что всё сохранено, и ссылку на файл
       ui().showToast(res.method === 'file' ? `Сохранено в «${res.fileName}»` : `Архив скачан: «${res.fileName}»`);
       return true;
     } catch (e) {
@@ -213,7 +215,8 @@ export const useSession = create<SessionState>((set, get) => ({
       const newSk = await createKey(newPw);
       set({ sk: newSk });
       archive().apply(() => {}, { history: [{ action: 'update', entity: 'archive', id: data.meta.id, summary: 'Пароль изменён' }] });
-      await clearDraft(); // черновик был зашифрован старым ключом
+      await clearDraft(); // снимок был зашифрован старым ключом
+      await get().autosaveDraft();
     } finally {
       set({ busy: null });
     }
@@ -227,18 +230,24 @@ export const useSession = create<SessionState>((set, get) => ({
     ui().setStoriesOpen(false);
     ui().select(null);
     set({ sk: null, fileName: '', handle: null, pending: null, pendingImport: null });
+    await snapshotQueue; // дописывающийся снимок не должен «воскресить» закрытый архив
     await clearDraft();
     set({ draft: null });
   },
 
   async autosaveDraft() {
-    const { sk, fileName } = get();
-    const data = archive().data;
-    if (!sk || !data || archive().status === 'saved') return;
-    try {
-      await saveDraft(sk, data, id => mediaRegistry.get(id), fileName);
-    } catch (e) {
-      console.warn('Черновик не сохранён', e);
-    }
+    // снимки пишутся строго по очереди, чтобы не перезаписать новый старым
+    snapshotQueue = snapshotQueue.then(async () => {
+      const { sk, fileName, handle } = get();
+      const data = archive().data;
+      if (!sk || !data) return;
+      try {
+        await saveDraft(sk, data, id => mediaRegistry.get(id), fileName, { saved: archive().status === 'saved', handle });
+      } catch (e) {
+        console.warn('Снимок архива не сохранён', e);
+      }
+    });
+    return snapshotQueue;
   },
+
 }));

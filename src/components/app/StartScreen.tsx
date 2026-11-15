@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArchiveError } from '../../archive/container';
 import { pickArchiveFile } from '../../archive/fileAccess';
 import { pickFiles } from '../../hooks/useFilePicker';
@@ -20,6 +20,15 @@ export function StartScreen() {
   const draft = useSession(s => s.draft);
   const busy = useSession(s => s.busy);
 
+  // после обновления страницы сразу предлагаем продолжить с открытым архивом (один раз — «Другой архив» ведёт на главную)
+  const autoShown = useRef(false);
+  useEffect(() => {
+    if (draft && !autoShown.current) {
+      autoShown.current = true;
+      setView('restore');
+    }
+  }, [draft]);
+
   const openFile = async () => {
     const r = await pickArchiveFile();
     if (r) useSession.getState().chooseFile(r.file, r.handle);
@@ -38,7 +47,7 @@ export function StartScreen() {
   if (pending) body = <UnlockForm fileName={pending.file.name} />;
   else if (pendingImport) body = <CreateForm mode="import" count={pendingImport.data.persons.length} onBack={() => useSession.setState({ pendingImport: null })} />;
   else if (view === 'create') body = <CreateForm mode="create" onBack={() => setView('home')} />;
-  else if (view === 'restore' && draft) body = <RestoreForm title={draft.title} onBack={() => setView('home')} />;
+  else if (view === 'restore' && draft) body = <RestoreForm title={draft.title} saved={draft.saved} onBack={() => setView('home')} />;
   else
     body = (
       <div className="start-card">
@@ -54,19 +63,21 @@ export function StartScreen() {
           <div className="draft-card">
             <Icon name="info" />
             <div>
-              <b>Несохранённые изменения</b>
+              <b>{draft.saved ? 'Последний открытый архив' : 'Несохранённые изменения'}</b>
               <small>
                 «{draft.title}», {new Date(draft.savedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
               </small>
             </div>
             <button className="primary" onClick={() => setView('restore')}>
-              Восстановить
+              {draft.saved ? 'Продолжить' : 'Восстановить'}
             </button>
             <button
               className="ghost danger icon-button"
-              title="Удалить черновик"
+              title={draft.saved ? 'Забыть' : 'Удалить черновик'}
               onClick={async () => {
-                const ok = await useUi.getState().confirm({ title: 'Удалить несохранённые изменения?', body: 'Восстановить их будет нельзя.', ok: 'Удалить' });
+                const ok = draft.saved
+                  ? await useUi.getState().confirm({ title: 'Забыть последний архив?', body: 'Сам файл .family не пострадает — его можно будет открыть снова.', ok: 'Забыть', danger: false, icon: 'x' })
+                  : await useUi.getState().confirm({ title: 'Удалить несохранённые изменения?', body: 'Восстановить их будет нельзя.', ok: 'Удалить' });
                 if (ok === true) useSession.getState().discardDraft();
               }}
             >
@@ -148,7 +159,7 @@ function UnlockForm({ fileName }: { fileName: string }) {
   );
 }
 
-function RestoreForm({ title, onBack }: { title: string; onBack(): void }) {
+function RestoreForm({ title, saved, onBack }: { title: string; saved: boolean; onBack(): void }) {
   const [pw, setPw] = useState('');
   const [error, setError] = useState('');
   const busy = useSession(s => s.busy);
@@ -169,18 +180,26 @@ function RestoreForm({ title, onBack }: { title: string; onBack(): void }) {
       <div className="start-logo lock">
         <Icon name="lock" size={30} />
       </div>
-      <h2>Восстановить изменения</h2>
+      <h2>{saved ? 'Продолжить работу' : 'Восстановить изменения'}</h2>
       <p className="start-sub">
-        Несохранённые изменения архива <b>«{title}»</b> хранятся в браузере в зашифрованном виде. Введите пароль этого архива.
+        {saved ? (
+          <>
+            Архив <b>«{title}»</b> был открыт до обновления страницы. Введите пароль, чтобы продолжить.
+          </>
+        ) : (
+          <>
+            Несохранённые изменения архива <b>«{title}»</b> хранятся в браузере в зашифрованном виде. Введите пароль этого архива.
+          </>
+        )}
       </p>
       <PasswordField id="restore_pw" label="Пароль архива" value={pw} onChange={setPw} autoFocus />
       {error && <div className="form-error">{error}</div>}
       <div className="start-actions">
         <button type="button" className="ghost" onClick={onBack} disabled={!!busy}>
-          Назад
+          Другой архив
         </button>
         <button className="primary" disabled={!pw || !!busy}>
-          Восстановить
+          <Icon name="unlock" /> {saved ? 'Открыть' : 'Восстановить'}
         </button>
       </div>
     </form>

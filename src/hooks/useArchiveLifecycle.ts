@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useArchive } from '../store/archiveStore';
 import { useSession } from '../store/sessionStore';
 
-/** Защита от потери изменений: зашифрованный черновик через 2 с после правки + предупреждение при закрытии. */
+/** Защита от потери: зашифрованный снимок архива через 2 с после правки (переживает обновление страницы) + предупреждение при закрытии. */
 export function useArchiveLifecycle() {
   const revision = useArchive(s => s.revision);
   const status = useArchive(s => s.status);

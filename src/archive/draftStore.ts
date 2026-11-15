@@ -1,8 +1,9 @@
-/* Черновик несохранённых изменений — на случай случайного закрытия вкладки.
+/* Снимок открытого архива — чтобы обновление страницы или случайно закрытая вкладка ничего не теряли.
    Хранится в IndexedDB ТОЛЬКО в зашифрованном виде тем же ключом, что и архив:
-   без пароля его не прочитать. Пароль и ключ не сохраняются. */
+   без пароля его не прочитать. Пароль и ключ не сохраняются. Удаляется при «Закрыть архив». */
 import { decrypt, deriveKey, encrypt, type KdfParams } from './crypto';
 import type { SessionKey } from './container';
+import type { FSHandle } from './fileAccess';
 import { normalizeArchive } from '../domain/normalize';
 import type { ArchiveData } from '../domain/types';
 
@@ -17,11 +18,15 @@ export interface DraftInfo {
   fileName: string;
   kdf: KdfParams;
   savedAt: number;
+  /** все изменения уже записаны в файл (снимок нужен только чтобы продолжить работу) */
+  saved: boolean;
 }
 
 interface DraftRecord extends DraftInfo {
   json: { nonce: Uint8Array; ct: Uint8Array };
   mediaIds: string[];
+  /** ссылка на файл (File System Access) — чтобы «Сохранить» снова писало в тот же файл */
+  handle?: FSHandle | null;
 }
 
 function openDb(): Promise<IDBDatabase> {
@@ -58,6 +63,7 @@ export async function saveDraft(
   data: ArchiveData,
   blobOf: (id: string) => Blob | undefined,
   fileName: string,
+  extra: { saved: boolean; handle: FSHandle | null },
 ): Promise<void> {
   const prev = (await tx<DraftRecord>('readonly', s => s.get('session')).catch(() => undefined)) as DraftRecord | undefined;
   const have = new Set(prev && prev.archiveId === data.meta.id ? prev.mediaIds : []);
@@ -75,29 +81,40 @@ export async function saveDraft(
     fileName,
     kdf: sk.kdf,
     savedAt: Date.now(),
+    saved: extra.saved,
+    handle: extra.handle,
     json,
     mediaIds: data.media.map(m => m.id),
   };
   const keep = new Set(rec.mediaIds);
-  await tx('readwrite', s => {
-    if (prev && prev.archiveId !== data.meta.id) s.clear();
-    s.put(rec, 'session');
-    newMedia.forEach(([id, v]) => s.put(v, 'media:' + id));
-    (prev?.mediaIds || []).filter(id => !keep.has(id)).forEach(id => s.delete('media:' + id));
-  });
+  const write = (r: DraftRecord) =>
+    tx('readwrite', s => {
+      if (prev && prev.archiveId !== data.meta.id) s.clear();
+      s.put(r, 'session');
+      newMedia.forEach(([id, v]) => s.put(v, 'media:' + id));
+      (prev?.mediaIds || []).filter(id => !keep.has(id)).forEach(id => s.delete('media:' + id));
+    });
+  try {
+    await write(rec);
+  } catch {
+    await write({ ...rec, handle: null }); // ссылку на файл сохранить не удалось — без неё
+  }
 }
 
 export async function draftInfo(): Promise<DraftInfo | null> {
   try {
     const r = (await tx<DraftRecord>('readonly', s => s.get('session'))) as DraftRecord | undefined;
-    return r ? { archiveId: r.archiveId, title: r.title, fileName: r.fileName, kdf: r.kdf, savedAt: r.savedAt } : null;
+    // у старых черновиков поля saved нет — значит, это были несохранённые изменения
+    return r ? { archiveId: r.archiveId, title: r.title, fileName: r.fileName, kdf: r.kdf, savedAt: r.savedAt, saved: r.saved ?? false } : null;
   } catch {
     return null;
   }
 }
 
 /** Восстановить черновик паролем. Бросает 'wrong-password', если пароль не подходит. */
-export async function restoreDraft(password: string): Promise<{ data: ArchiveData; blobs: Map<string, Blob>; sk: SessionKey; fileName: string }> {
+export async function restoreDraft(
+  password: string,
+): Promise<{ data: ArchiveData; blobs: Map<string, Blob>; sk: SessionKey; fileName: string; saved: boolean; handle: FSHandle | null }> {
   const r = (await tx<DraftRecord>('readonly', s => s.get('session'))) as DraftRecord | undefined;
   if (!r) throw new Error('no-draft');
   const key = await deriveKey(password, r.kdf);
@@ -121,7 +138,7 @@ export async function restoreDraft(password: string): Promise<{ data: ArchiveDat
       /* повреждённый файл черновика — пропускаем */
     }
   }
-  return { data, blobs, sk: { key, kdf: r.kdf }, fileName: r.fileName };
+  return { data, blobs, sk: { key, kdf: r.kdf }, fileName: r.fileName, saved: r.saved ?? false, handle: r.handle ?? null };
 }
 
 export async function clearDraft(): Promise<void> {

@@ -59,3 +59,39 @@ button.danger-solid:hover {
     background: color-mix(in srgb, var(--danger) 85%, #000);
     border-color: transparent;
 }
+
+/* кнопки подтверждения: две — поровну в ряд, три — столбцом на всю ширину */
+.confirm-modal .confirm-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.confirm-modal .confirm-actions.stacked {
+    grid-template-columns: 1fr;
+}
+
+.confirm-modal .confirm-actions button {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    white-space: normal;
+    text-align: center;
+    height: auto;
+    min-height: 42px;
+    padding: 8px 14px;
+}
+
+.confirm-modal .confirm-actions.stacked button.ghost.danger {
+    border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+}
+
+@media (max-width: 420px) {
+    .confirm-modal .modal-body {
+        padding: 22px 18px 16px;
+    }
+
+    .confirm-modal .confirm-actions {
+        padding: 14px 18px;
+    }
+}
