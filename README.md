@@ -74,7 +74,7 @@ npm test
 ## Иконки, логотип и фото
 
 - Иконки — [Lucide](https://lucide.dev) (лицензия ISC).
-- Логотип — `public/logo.svg` и `public/logo-512.png` (1:1, прозрачный фон): буква R из линий родословной, её концы — кольца-узлы (люди).
+- Логотип — `public/logo.svg` и `public/logo-512.png` (1:1): схема родства — предок и два потомка — на плитке с фирменным градиентом, вне плитки фон прозрачный.
 - Фото на главной — [Unsplash](https://unsplash.com) (Unsplash License), лежат в `src/assets/landing`.
 
 ## Структура
