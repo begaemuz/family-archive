@@ -1,3 +1,4 @@
+import { PanelResizer } from './PanelResizer';
 import { useArchive } from '../../store/archiveStore';
 import { useUi } from '../../store/uiStore';
 import { PersonForm } from './PersonForm';
@@ -12,6 +13,7 @@ export function SidePanel() {
   const open = panel.open && (formOpen || (!!person && !hidden));
   return (
     <aside className={'side-panel' + (open ? ' open' : '') + (formOpen ? ' form-mode' : '')} aria-label="Карточка человека">
+      <PanelResizer />
       {open && formOpen && <PersonForm key={(panel.form!.personId ?? 'new') + (panel.form!.anchorId ?? '')} ctx={panel.form!} />}
       {open && !formOpen && person && <PersonView key={person.id} person={person} />}
     </aside>

@@ -119,22 +119,6 @@
         font-size: 16px;
     }
 
-    .tabs {
-        padding: 4px 8px 0;
-        gap: 0;
-    }
-
-    .tab {
-        padding: 0 6px;
-        font-size: 13px;
-    }
-
-    .tab .count {
-        min-width: 18px;
-        height: 18px;
-        padding: 0 5px;
-    }
-
     .sp-body {
         padding: 16px;
     }

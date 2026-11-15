@@ -1,3 +1,4 @@
+import { PanelResizer } from '../panel/PanelResizer';
 import { useAccess } from '../../hooks/useAccess';
 import { useEffect, useMemo, useState } from 'react';
 import { newId } from '../../domain/normalize';
@@ -46,6 +47,7 @@ export function StoriesPanel() {
 
   return (
     <aside className={'side-panel stories-panel' + (open ? ' open' : '') + (editing ? ' form-mode' : '')} aria-label="Семейные истории">
+      <PanelResizer />
       {open && editing && <StoryEditor story={editing} onDone={id => (setEditing(null), setViewId(id))} />}
       {open && !editing && viewed && <StoryView story={viewed} onBack={() => setViewId(null)} onEdit={() => setEditing({ ...viewed })} />}
       {open && !editing && !viewed && (

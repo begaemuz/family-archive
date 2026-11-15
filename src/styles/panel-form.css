@@ -1,13 +1,4 @@
-/* форма внутри боковой панели */
-.side-panel.form-mode {
-    width: min(520px, calc(100vw - 24px));
-}
-
-body.panel-open .side-panel.form-mode~* .canvas-controls,
-body.panel-open:has(.side-panel.form-mode) .canvas-controls {
-    right: calc(min(520px, 100vw - 24px) + 28px);
-}
-
+/* форма внутри боковой панели — та же ширина, что у панели (--panel-w) */
 .side-panel .modal-header {
     padding: 18px 20px;
     background: radial-gradient(120% 90% at 0% 0%, var(--accent-soft), transparent 60%), var(--panel);

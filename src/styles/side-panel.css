@@ -1,10 +1,16 @@
 /* ================= БОКОВАЯ ПАНЕЛЬ ЧЕЛОВЕКА ================= */
+/* Ширина панели задаётся ТОЛЬКО здесь — переменной --panel-w. От неё же отступают правая и нижняя панели.
+   По умолчанию — резиновая (40% экрана, но не уже 580px — чтобы подписи вкладок помещались); пользователь может растянуть её за левый край
+   (тогда --panel-w ставится на <html> и запоминается). */
+:root {
+    --panel-w: clamp(580px, 40vw, 720px);
+}
 .side-panel {
     position: fixed;
     top: 12px;
     right: 12px;
     bottom: 12px;
-    width: min(520px, calc(100vw - 24px));
+    width: min(var(--panel-w), calc(100vw - 24px));
     z-index: 30;
     display: flex;
     flex-direction: column;
@@ -22,7 +28,7 @@
 }
 
 body.panel-open .canvas-controls {
-    right: calc(min(520px, 100vw - 24px) + 28px);
+    right: calc(min(var(--panel-w), 100vw - 24px) + 28px);
 }
 
 .sp-head {
@@ -130,19 +136,20 @@ body.panel-open .canvas-controls {
 }
 
 .tabs {
+    /* вкладки делят ширину поровну и никогда не вылезают за край — сколько бы их ни было */
+    container-type: inline-size;
     display: flex;
-    gap: 4px;
-    padding: 8px 12px 0;
+    gap: 2px;
+    padding: 6px 8px 0;
     border-bottom: 1px solid var(--border);
     flex: none;
-    overflow-x: auto;
-    scrollbar-width: none;
 }
 
 .tab {
     flex: 1 1 auto;
-    height: 42px;
-    padding: 0 8px;
+    min-width: 0;
+    height: 44px;
+    padding: 0 6px;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -150,6 +157,19 @@ body.panel-open .canvas-controls {
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
     gap: 6px;
+    justify-content: center;
+    font-size: 13.5px;
+    white-space: nowrap;
+}
+
+.tab svg {
+    flex: none;
+}
+
+.tab-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tab:hover {
@@ -163,9 +183,10 @@ body.panel-open .canvas-controls {
 }
 
 .tab .count {
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
+    flex: none;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
     border-radius: 999px;
     font-size: 11px;
     font-weight: 700;
@@ -178,6 +199,72 @@ body.panel-open .canvas-controls {
 .tab.active .count {
     background: var(--accent-soft);
     color: var(--accent);
+}
+
+/* иконки рядом с подписями — только на широкой панели; средняя ширина — одни подписи */
+@container (max-width: 800px) {
+    .tab svg {
+        display: none;
+    }
+}
+
+/* узко — только иконки (название — во всплывающей подсказке) */
+@container (max-width: 560px) {
+    .tab svg {
+        display: block;
+    }
+
+    .tab-label {
+        display: none;
+    }
+
+    .tab .count {
+        min-width: 17px;
+        height: 17px;
+        padding: 0 4px;
+        font-size: 10px;
+    }
+}
+
+/* растягивание панели за левый край */
+.panel-resizer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    z-index: 5;
+    cursor: ew-resize;
+    touch-action: none;
+}
+
+.panel-resizer::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    width: 4px;
+    height: 44px;
+    margin-top: -22px;
+    border-radius: 2px;
+    background: var(--border-strong);
+    opacity: 0;
+    transition: opacity .15s;
+}
+
+.side-panel:hover .panel-resizer::after,
+.panel-resizer.dragging::after {
+    opacity: 1;
+}
+
+body.resizing-panel,
+body.resizing-panel * {
+    cursor: ew-resize !important;
+    user-select: none !important;
+}
+
+body.resizing-panel .side-panel {
+    transition: none;
 }
 
 .sp-body {
@@ -245,4 +332,11 @@ body.panel-open .canvas-controls {
 
 .sp-empty button {
     margin-top: 14px;
+}
+
+/* на телефоне панель — снизу на всю ширину: растягивать нечего */
+@media (max-width: 700px) {
+    .panel-resizer {
+        display: none;
+    }
 }

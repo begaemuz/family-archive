@@ -743,19 +743,6 @@ textarea.tall {
     }
 }
 
-/* пять вкладок в панели человека — компактнее, чтобы помещались без прокрутки */
-.tabs {
-    gap: 0;
-    padding: 8px 8px 0;
-}
-
-.tab {
-    padding: 0 7px;
-    font-size: 13px;
-    gap: 5px;
-    white-space: nowrap;
-}
-
 /* ---------- медиа по разделам ---------- */
 .media-section + .media-section {
     margin-top: 20px;
@@ -845,12 +832,6 @@ textarea.tall {
     margin-top: 14px;
 }
 
-/* вкладки не помещаются (узкий экран) — справа затухание, намекающее на прокрутку */
-.tabs.overflow {
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
-    mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
-}
-
 /* текст карточки истории переносится, а не растягивает панель */
 .story-item {
     white-space: normal;
@@ -913,7 +894,7 @@ textarea.tall {
 }
 
 body.panel-open .action-dock {
-    right: calc(min(520px, 100vw - 24px) + 28px);
+    right: calc(min(var(--panel-w), 100vw - 24px) + 28px);
 }
 
 .dock-btn {

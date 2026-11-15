@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { useAccess } from '../../hooks/useAccess';
 import { relationGroups } from '../../domain/kinship';
 import { personMedia } from '../../domain/mediaPeople';
@@ -37,29 +37,14 @@ export function PersonView({ person: p }: { person: Person }) {
   const storyCount = useMemo(() => stories.filter(s => s.personIds.includes(p.id)).length, [stories, p.id]);
   const chips = [p.gender, ageText(p), p.occupation].filter(Boolean);
 
-  // на узком экране вкладки прокручиваются: выбранную держим в поле зрения, справа — затухание-подсказка
-  const tabsRef = useRef<HTMLElement>(null);
-  const [tabsOverflow, setTabsOverflow] = useState(false);
-  const checkTabs = () => {
-    const el = tabsRef.current;
-    if (el) setTabsOverflow(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  };
-  useEffect(() => {
-    tabsRef.current?.querySelector<HTMLElement>('.tab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    checkTabs();
-  }, [tab, p.id]);
-  useEffect(() => {
-    window.addEventListener('resize', checkTabs);
-    return () => window.removeEventListener('resize', checkTabs);
-  }, []);
-
-  const tabs: [PanelTab, string, number | null][] = [
-    ['info', 'Основное', null],
-    ['media', 'Медиа', mediaCount || null],
-    ['documents', 'Документы', p.documents.length || null],
-    ['relations', 'Связи', relCount || null],
-    ['bio', 'Биография', p.bio.length || null],
-    ['stories', 'Истории', storyCount || null],
+  // вкладки: иконка + подпись; на узкой панели остаются только иконки (стили — side-panel.css)
+  const tabs: [PanelTab, string, string, number | null][] = [
+    ['info', 'Основное', 'user', null],
+    ['media', 'Медиа', 'image', mediaCount || null],
+    ['documents', 'Документы', 'file', p.documents.length || null],
+    ['relations', 'Связи', 'users', relCount || null],
+    ['bio', 'Биография', 'book', p.bio.length || null],
+    ['stories', 'Истории', 'story', storyCount || null],
   ];
 
   return (
@@ -104,10 +89,11 @@ export function PersonView({ person: p }: { person: Person }) {
           </div>
         </div>
       </div>
-      <nav className={'tabs' + (tabsOverflow ? ' overflow' : '')} role="tablist" ref={tabsRef} onScroll={checkTabs}>
-        {tabs.map(([key, label, count]) => (
-          <button key={key} className={'tab' + (tab === key ? ' active' : '')} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>
-            {label}
+      <nav className="tabs" role="tablist">
+        {tabs.map(([key, label, icon, count]) => (
+          <button key={key} className={'tab' + (tab === key ? ' active' : '')} role="tab" aria-selected={tab === key} title={label} onClick={() => setTab(key)}>
+            <Icon name={icon} size={16} />
+            <span className="tab-label">{label}</span>
             {count ? <span className="count">{count}</span> : null}
           </button>
         ))}
