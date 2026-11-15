@@ -461,3 +461,16 @@
 .lb-chips:empty {
     display: none;
 }
+
+.lightbox .lb-people .lb-rescan {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    justify-content: center;
+    background: transparent;
+    color: rgba(255, 255, 255, .6);
+}
+
+.lightbox .lb-people .lb-rescan:hover {
+    color: #fff;
+}

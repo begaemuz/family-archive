@@ -5,7 +5,7 @@ import { autoLayout as runAutoLayout, layoutRows, type RowsLayout } from '../dom
 import { computeHidden, descGraph, descendantsOf, isAncestor } from '../domain/graph';
 import { createMeta, createPerson, newId, ownerUser } from '../domain/normalize';
 import { fullName } from '../domain/people';
-import type { ArchiveData, HistoryEntry, MediaItem, Person, RelType, Story, Tombstone } from '../domain/types';
+import type { ArchiveData, HistoryEntry, MediaFace, MediaItem, Person, RelType, Story, Tombstone } from '../domain/types';
 import { mediaRegistry } from './mediaRegistry';
 
 export type SaveStatus = 'saved' | 'dirty' | 'saving' | 'error';
@@ -57,7 +57,14 @@ interface ArchiveState {
   /** год снимка (null — не указан); старый текст даты при этом очищается */
   setMediaYear(mediaId: string, year: number | null): void;
   /** распознавание лиц: «нет, это не он» — больше не предлагать этого человека на этом фото */
-  rejectFaceMatch(mediaId: string, personId: string): void;
+  /** сохранить найденные лица фото */
+  setMediaFaces(mediaId: string, faces: MediaFace[]): void;
+  /** запомнить найденные лица сразу у многих фото (одним изменением) */
+  addFacesCache(found: Map<string, MediaFace[]>): void;
+  /** «Да, это он»: лицо — этот человек, и человек отмечен на фото */
+  confirmFace(mediaId: string, index: number): void;
+  /** «Нет»: не предлагать этого человека на этом фото */
+  rejectFace(mediaId: string, index: number): void;
 
   // истории
   saveStory(story: Story): void;
@@ -318,9 +325,48 @@ export const useArchive = create<ArchiveState>((set, get) => ({
     }, { history: [{ action: 'update', entity: 'media', id: mediaId, summary: year ? `Год фото: ${year}` : 'Год фото убран' }] });
   },
 
-  rejectFaceMatch(mediaId, personId) {
+  setMediaFaces(mediaId, faces) {
+    const m = get().data?.media.find(x => x.id === mediaId);
+    if (!m || JSON.stringify(m.faces ?? null) === JSON.stringify(faces)) return;
     get().apply(d => {
-      d.media = d.media.map(x => (x.id === mediaId ? { ...x, notPeople: [...new Set([...(x.notPeople ?? []), personId])] } : x));
+      d.media = d.media.map(x => (x.id === mediaId ? { ...x, faces } : x));
+    });
+  },
+
+  addFacesCache(found) {
+    const d0 = get().data;
+    if (!d0 || !d0.media.some(m => !m.faces && found.has(m.id))) return;
+    get().apply(d => {
+      d.media = d.media.map(m => (!m.faces && found.has(m.id) ? { ...m, faces: found.get(m.id)! } : m));
+    });
+  },
+
+  confirmFace(mediaId, index) {
+    const m = get().data?.media.find(x => x.id === mediaId);
+    const pid = m?.faces?.[index]?.s;
+    if (!m || !pid) return;
+    get().apply(
+      d => {
+        d.media = d.media.map(x => {
+          if (x.id !== mediaId) return x;
+          const faces = (x.faces ?? []).map((f, i) => (i === index ? { ...f, p: pid, s: undefined } : f.s === pid ? { ...f, s: undefined } : f));
+          return { ...x, faces, people: x.people.includes(pid) ? x.people : [...x.people, pid] };
+        });
+      },
+      { history: [{ action: 'update', entity: 'media', id: mediaId, summary: 'Узнан человек на фото' }] },
+    );
+  },
+
+  rejectFace(mediaId, index) {
+    const m = get().data?.media.find(x => x.id === mediaId);
+    const pid = m?.faces?.[index]?.s;
+    if (!m || !pid) return;
+    get().apply(d => {
+      d.media = d.media.map(x =>
+        x.id !== mediaId
+          ? x
+          : { ...x, notPeople: [...new Set([...(x.notPeople ?? []), pid])], faces: (x.faces ?? []).map((f, i) => (i === index ? { ...f, s: undefined } : f)) },
+      );
     });
   },
 

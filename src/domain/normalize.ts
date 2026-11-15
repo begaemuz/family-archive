@@ -1,7 +1,7 @@
 /* Создание и проверка данных. Всё, что приходит из файла (архив, старый ZIP/JSON), считается
    недоверенным: каждое поле приводится к ожидаемому типу, лишнее отбрасывается. */
 import { normDate } from './people';
-import type { ArchiveData, ArchiveMeta, BioSection, Burial, Gender, HistoryEntry, MediaItem, MediaKind, Person, RelType, Relation, Social, SocialNetwork, Story, AccessUser, Tombstone } from './types';
+import type { ArchiveData, ArchiveMeta, BioSection, Burial, Gender, HistoryEntry, MediaFace, MediaItem, MediaKind, Person, RelType, Relation, Social, SocialNetwork, Story, AccessUser, Tombstone } from './types';
 
 export const newId = (): string => crypto.randomUUID();
 
@@ -178,6 +178,24 @@ export function normalizeRelation(raw: unknown, personIds: Set<string>): Relatio
 
 export const MEDIA_KINDS: MediaKind[] = ['photo', 'video', 'audio', 'document'];
 
+const frac = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1;
+
+function normalizeFaces(raw: unknown[]): MediaFace[] {
+  return raw
+    .slice(0, 100)
+    .filter((f): f is Record<string, unknown> => !!f && typeof f === 'object')
+    .filter(f => frac(f.x) && frac(f.y) && frac(f.w) && frac(f.h) && typeof f.d === 'string' && /^[A-Za-z0-9+/=]{100,2000}$/.test(f.d))
+    .map(f => ({
+      x: f.x as number,
+      y: f.y as number,
+      w: f.w as number,
+      h: f.h as number,
+      d: f.d as string,
+      ...(isId(f.p) ? { p: f.p } : null),
+      ...(isId(f.s) ? { s: f.s } : null),
+    }));
+}
+
 export function normalizeMedia(raw: unknown): MediaItem | null {
   if (!raw || typeof raw !== 'object') return null;
   const m = raw as Record<string, unknown>;
@@ -194,6 +212,7 @@ export function normalizeMedia(raw: unknown): MediaItem | null {
     date: str(m.date, 60),
     year: mediaYear(m.year, m.date),
     ...(ids(m.notPeople).length ? { notPeople: [...new Set(ids(m.notPeople))] } : null),
+    ...(Array.isArray(m.faces) ? { faces: normalizeFaces(m.faces) } : null),
     ...(typeof m.updatedAt === 'number' ? { updatedAt: m.updatedAt } : null),
     ...stamps(m),
   };

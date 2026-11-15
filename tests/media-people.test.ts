@@ -1,3 +1,4 @@
+import { normalizeMedia } from '../src/domain/normalize';
 /* Отметки людей на фото: совместное фото видно у всех отмеченных. */
 import { personMedia } from '../src/domain/mediaPeople';
 import { createMeta, createPerson, newId, normalizeArchive, ownerUser } from '../src/domain/normalize';
@@ -66,5 +67,30 @@ describe('отметки людей на фото', () => {
     expect(d.persons.find(p => p.id === husband.id)!.media).toEqual([photo.id]);
     expect(d.media[0].people).toEqual([]);
     useArchive.getState().close();
+  });
+});
+
+describe('лица на фото сохраняются в архиве', () => {
+  const d = btoa(String.fromCharCode(...new Uint8Array(new Float32Array(128).fill(0.25).buffer)));
+  const id = 'aaaaaaaa-1111-2222-3333-444444444444';
+  const pid = 'bbbbbbbb-1111-2222-3333-444444444444';
+
+  it('рамки, отпечаток и ответы проходят нормализацию, мусор отбрасывается', () => {
+    const m = normalizeMedia({
+      id,
+      kind: 'photo',
+      faces: [
+        { x: 0.1, y: 0.2, w: 0.1, h: 0.15, d, p: pid },
+        { x: 0.5, y: 0.2, w: 0.1, h: 0.15, d, s: pid },
+        { x: 2, y: 0, w: 0.1, h: 0.1, d },
+        { x: 0.1, y: 0.1, w: 0.1, h: 0.1, d: '<script>' },
+      ],
+    })!;
+    expect(m.faces).toHaveLength(2);
+    expect(m.faces![0].p).toBe(pid);
+    expect(m.faces![1].s).toBe(pid);
+    // «искали, но лиц нет» — тоже запоминается
+    expect(normalizeMedia({ id, kind: 'photo', faces: [] })!.faces).toEqual([]);
+    expect(normalizeMedia({ id, kind: 'photo' })!.faces).toBeUndefined();
   });
 });

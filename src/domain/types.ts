@@ -103,6 +103,20 @@ export interface Relation {
 
 export type MediaKind = 'photo' | 'video' | 'audio' | 'document';
 
+/** Лицо на фото. Рамка — в долях размеров фото. d — «отпечаток» лица (128 чисел, base64) —
+    по нему узнаётся человек; хранится только внутри зашифрованного архива. */
+export interface MediaFace {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  d: string;
+  /** кто это (узнан или подтверждён «Да») */
+  p?: string;
+  /** кого система предлагает: «Кажется, это …?» */
+  s?: string;
+}
+
 export interface MediaItem {
   id: string;
   kind: MediaKind;
@@ -119,6 +133,8 @@ export interface MediaItem {
   date: string;
   /** кого распознавание лиц НЕ должно предлагать на этом фото (ответ «нет») */
   notPeople?: string[];
+  /** найденные на фото лица — сохраняются, чтобы не искать заново и узнавать людей в следующий раз */
+  faces?: MediaFace[];
   updatedAt?: number;
   createdBy?: string;
   updatedBy?: string;

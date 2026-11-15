@@ -97,6 +97,20 @@ function loginTaken(d: ArchiveData, login: string, exceptId?: string) {
 function openAs(data: ArchiveData, blobs: Map<string, Blob>, sk: SessionKey) {
   archive().open(data, blobs);
   archive().setActor(sk.userId);
+  loginSucceeded();
+}
+
+/* Вход проходит без перезагрузки и без запросов в сеть, поэтому браузер не понимает, что пароль подошёл,
+   и предлагает «Сохранить пароль» позже — при первом же запросе (например, загрузке распознавания лиц).
+   Навигация внутри страницы (replaceState) — сигнал для браузера: вход удался, спросить сейчас, а не потом. */
+function loginSucceeded() {
+  setTimeout(() => {
+    try {
+      history.replaceState(history.state, '', location.href);
+    } catch {
+      /* не страшно */
+    }
+  }, 0);
 }
 
 export const useSession = create<SessionState>((set, get) => ({

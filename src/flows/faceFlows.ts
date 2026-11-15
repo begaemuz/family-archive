@@ -1,5 +1,6 @@
-/* После загрузки фото: в фоне ищем лица и, если кого-то узнали, открываем фото с вопросом «Кажется, это …?». */
-import { facesAvailable, matchFaces } from '../faces/faces';
+/* После загрузки фото: в фоне ищем лица, сохраняем их в архив и, если кого-то узнали,
+   открываем фото с вопросом «Кажется, это …?». */
+import { facesAvailable, matchFaces, toMediaFaces } from '../faces/faces';
 import { useArchive } from '../store/archiveStore';
 import { useUi } from '../store/uiStore';
 
@@ -12,7 +13,9 @@ export async function suggestFaces(mediaIds: string[], ownerId: string) {
     const item = data?.media.find(m => m.id === id);
     if (!data || !item) return; // архив закрыли
     try {
-      if ((await matchFaces(data, item)).some(m => m.suggestId)) withAsks.push(id);
+      const matches = await matchFaces(data, item);
+      useArchive.getState().setMediaFaces(id, toMediaFaces(matches));
+      if (matches.some(m => m.suggestId)) withAsks.push(id);
     } catch {
       return; // распознавание недоступно — молча, это лишь подсказка
     }
@@ -20,5 +23,5 @@ export async function suggestFaces(mediaIds: string[], ownerId: string) {
   const ui = useUi.getState();
   // не перебиваем, если человек уже что-то смотрит
   if (!withAsks.length || ui.lightbox) return;
-  ui.openLightbox({ ids: withAsks, index: 0, ownerId, scan: true });
+  ui.openLightbox({ ids: withAsks, index: 0, ownerId });
 }
