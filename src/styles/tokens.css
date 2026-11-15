@@ -1,0 +1,108 @@
+/* ================= ТЕМА ================= */
+:root {
+    --bg: #0e1117;
+    --bg-dot: #252b37;
+    --panel: #161a22;
+    --panel-2: #1c212b;
+    --panel-3: #232936;
+    --glass: rgba(22, 26, 34, .78);
+    --border: #2a303d;
+    --border-strong: #363e4e;
+    --text: #e9edf4;
+    --muted: #8d97a8;
+    --faint: #5f6878;
+    --accent: #7b8cff;
+    --accent-strong: #6274ff;
+    --accent-soft: rgba(123, 140, 255, .14);
+    --on-accent: #ffffff;
+    --danger: #ff6b6b;
+    --danger-soft: rgba(255, 107, 107, .12);
+    --ring: #3a4254;
+    --line-parent: #7c8fd6;
+    --line-spouse: #c9a46a;
+    --line-sibling: #6fb39a;
+    --line-other: #8a93a3;
+    --male: #6f9bff;
+    --female: #f07aa8;
+    --neutral: #9aa6bb;
+    --halo: rgba(14, 17, 23, .9);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
+    --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+    --shadow-lg: 0 24px 70px rgba(0, 0, 0, .5);
+    --r-sm: 10px;
+    --r: 14px;
+    --r-lg: 20px;
+    --topbar-h: 64px;
+    color-scheme: dark;
+}
+
+body[data-theme="light"] {
+    --bg: #f3f5f9;
+    --bg-dot: #d7dce6;
+    --panel: #ffffff;
+    --panel-2: #f6f7fb;
+    --panel-3: #eef1f6;
+    --glass: rgba(255, 255, 255, .82);
+    --border: #e4e8ef;
+    --border-strong: #d3d9e3;
+    --text: #172033;
+    --muted: #687387;
+    --faint: #9aa3b2;
+    --accent: #4f63e8;
+    --accent-strong: #3f52d6;
+    --accent-soft: rgba(79, 99, 232, .1);
+    --danger: #e04848;
+    --danger-soft: rgba(224, 72, 72, .08);
+    --ring: #cfd6e2;
+    --line-parent: #6f84d8;
+    --line-spouse: #c29550;
+    --line-sibling: #4f9c80;
+    --line-other: #9aa3b2;
+    --male: #3d74e8;
+    --female: #e0518a;
+    --neutral: #8792a6;
+    --halo: rgba(243, 245, 249, .95);
+    --shadow-sm: 0 1px 2px rgba(23, 32, 51, .06);
+    --shadow: 0 10px 30px rgba(23, 32, 51, .08);
+    --shadow-lg: 0 24px 70px rgba(23, 32, 51, .16);
+    color-scheme: light;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea,
+select {
+    font: inherit;
+    color: inherit;
+}
+
+svg.i {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    display: block;
+}

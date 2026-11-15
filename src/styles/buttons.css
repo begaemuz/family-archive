@@ -1,0 +1,70 @@
+/* ================= КНОПКИ ================= */
+button {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background .15s, border-color .15s, color .15s, box-shadow .15s, transform .1s;
+}
+
+button:hover {
+    background: var(--panel-3);
+    border-color: var(--border-strong);
+}
+
+/* кнопки вокруг круга позиционируются через transform — им «вдавливание» не нужно,
+   иначе при нажатии кнопка съезжает, отпускание приходится на круг и открывается карточка */
+button:not(.direction-btn):active {
+    transform: translateY(1px);
+}
+
+button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 1px var(--accent);
+}
+
+button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+    box-shadow: 0 6px 18px -6px var(--accent);
+}
+
+button.primary:hover {
+    background: var(--accent-strong);
+    border-color: var(--accent-strong);
+}
+
+button.ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--muted);
+}
+
+button.ghost:hover {
+    background: var(--panel-3);
+    color: var(--text);
+}
+
+button.danger {
+    color: var(--danger);
+}
+
+button.danger:hover {
+    background: var(--danger-soft);
+    border-color: transparent;
+}
+
+.icon-button {
+    width: 40px;
+    padding: 0;
+}

@@ -1,0 +1,567 @@
+{
+ "persons": [
+  {
+   "id": 1,
+   "firstName": "N1",
+   "gender": "Мужской",
+   "birth": "**.**.1900",
+   "x": 500,
+   "y": 500
+  },
+  {
+   "id": 2,
+   "firstName": "N2",
+   "gender": "Женский",
+   "birth": "**.**.1903",
+   "x": 730,
+   "y": 500
+  },
+  {
+   "id": 3,
+   "firstName": "N3",
+   "gender": "Мужской",
+   "birth": "**.**.1925",
+   "x": 960,
+   "y": 500
+  },
+  {
+   "id": 4,
+   "firstName": "N4",
+   "gender": "Мужской",
+   "birth": "**.**.1928",
+   "x": 1190,
+   "y": 500
+  },
+  {
+   "id": 5,
+   "firstName": "N5",
+   "gender": "Женский",
+   "birth": "**.**.1927",
+   "x": 1420,
+   "y": 500
+  },
+  {
+   "id": 6,
+   "firstName": "N6",
+   "gender": "Женский",
+   "birth": "**.**.1930",
+   "x": 1650,
+   "y": 500
+  },
+  {
+   "id": 7,
+   "firstName": "N7",
+   "gender": "Женский",
+   "birth": "",
+   "x": 1880,
+   "y": 500
+  },
+  {
+   "id": 8,
+   "firstName": "N8",
+   "gender": "Женский",
+   "birth": "**.**.1931",
+   "x": 2110,
+   "y": 500
+  },
+  {
+   "id": 9,
+   "firstName": "N9",
+   "gender": "Мужской",
+   "birth": "**.**.1950",
+   "x": 2340,
+   "y": 500
+  },
+  {
+   "id": 10,
+   "firstName": "N10",
+   "gender": "Женский",
+   "birth": "**.**.1952",
+   "x": 2570,
+   "y": 500
+  },
+  {
+   "id": 11,
+   "firstName": "N11",
+   "gender": "Мужской",
+   "birth": "**.**.1955",
+   "x": 2800,
+   "y": 500
+  },
+  {
+   "id": 12,
+   "firstName": "N12",
+   "gender": "Женский",
+   "birth": "",
+   "x": 3030,
+   "y": 500
+  },
+  {
+   "id": 13,
+   "firstName": "N13",
+   "gender": "Мужской",
+   "birth": "",
+   "collapsed": true,
+   "x": 3260,
+   "y": 500
+  },
+  {
+   "id": 14,
+   "firstName": "N14",
+   "gender": "Женский",
+   "birth": "",
+   "x": 3490,
+   "y": 500
+  },
+  {
+   "id": 15,
+   "firstName": "N15",
+   "gender": "Мужской",
+   "birth": "**.**.1960",
+   "x": 3720,
+   "y": 500
+  },
+  {
+   "id": 16,
+   "firstName": "N16",
+   "gender": "Мужской",
+   "birth": "**.**.1953",
+   "x": 3950,
+   "y": 500
+  },
+  {
+   "id": 17,
+   "firstName": "N17",
+   "gender": "Женский",
+   "birth": "**.**.1956",
+   "x": 4180,
+   "y": 500
+  },
+  {
+   "id": 18,
+   "firstName": "N18",
+   "gender": "Женский",
+   "birth": "**.**.1951",
+   "x": 4410,
+   "y": 500
+  },
+  {
+   "id": 19,
+   "firstName": "N19",
+   "gender": "Мужской",
+   "birth": "**.**.1920",
+   "x": 4640,
+   "y": 500
+  },
+  {
+   "id": 20,
+   "firstName": "N20",
+   "gender": "Женский",
+   "birth": "**.**.1922",
+   "x": 4870,
+   "y": 500
+  },
+  {
+   "id": 21,
+   "firstName": "N21",
+   "gender": "Мужской",
+   "birth": "**.**.1949",
+   "x": 5100,
+   "y": 500
+  },
+  {
+   "id": 22,
+   "firstName": "N22",
+   "gender": "Мужской",
+   "birth": "**.**.1975",
+   "x": 5330,
+   "y": 500
+  },
+  {
+   "id": 23,
+   "firstName": "N23",
+   "gender": "Женский",
+   "birth": "**.**.1978",
+   "x": 5560,
+   "y": 500
+  },
+  {
+   "id": 24,
+   "firstName": "N24",
+   "gender": "Женский",
+   "birth": "**.**.1980",
+   "x": 5790,
+   "y": 500
+  },
+  {
+   "id": 25,
+   "firstName": "N25",
+   "gender": "Мужской",
+   "birth": "**.**.1982",
+   "x": 6020,
+   "y": 500
+  },
+  {
+   "id": 26,
+   "firstName": "N26",
+   "gender": "Мужской",
+   "birth": "**.**.2000",
+   "x": 6250,
+   "y": 500
+  },
+  {
+   "id": 27,
+   "firstName": "N27",
+   "gender": "Женский",
+   "birth": "**.**.2003",
+   "x": 6480,
+   "y": 500
+  },
+  {
+   "id": 28,
+   "firstName": "N28",
+   "gender": "Женский",
+   "birth": "",
+   "x": 6710,
+   "y": 500
+  },
+  {
+   "id": 29,
+   "firstName": "N29",
+   "gender": "Мужской",
+   "birth": "**.**.2005",
+   "x": 6940,
+   "y": 500
+  },
+  {
+   "id": 30,
+   "firstName": "N30",
+   "gender": "Женский",
+   "birth": "**.**.1958",
+   "x": 7170,
+   "y": 500
+  },
+  {
+   "id": 31,
+   "firstName": "N31",
+   "gender": "Мужской",
+   "birth": "**.**.1940",
+   "x": 7400,
+   "y": 500
+  },
+  {
+   "id": 32,
+   "firstName": "N32",
+   "gender": "Женский",
+   "birth": "**.**.1942",
+   "x": 7630,
+   "y": 500
+  },
+  {
+   "id": 33,
+   "firstName": "N33",
+   "gender": "Мужской",
+   "birth": "**.**.1965",
+   "x": 7860,
+   "y": 500
+  },
+  {
+   "id": 34,
+   "firstName": "N34",
+   "gender": "Женский",
+   "birth": "",
+   "x": 8090,
+   "y": 500
+  }
+ ],
+ "relations": [
+  {
+   "id": "s1_2",
+   "from": 1,
+   "to": 2,
+   "type": "spouse"
+  },
+  {
+   "id": "p1_3",
+   "from": 1,
+   "to": 3,
+   "type": "parent"
+  },
+  {
+   "id": "p2_3",
+   "from": 2,
+   "to": 3,
+   "type": "parent"
+  },
+  {
+   "id": "p1_4",
+   "from": 1,
+   "to": 4,
+   "type": "parent"
+  },
+  {
+   "id": "p2_4",
+   "from": 2,
+   "to": 4,
+   "type": "parent"
+  },
+  {
+   "id": "s3_5",
+   "from": 3,
+   "to": 5,
+   "type": "spouse"
+  },
+  {
+   "id": "s3_6",
+   "from": 3,
+   "to": 6,
+   "type": "spouse"
+  },
+  {
+   "id": "s3_7",
+   "from": 3,
+   "to": 7,
+   "type": "spouse"
+  },
+  {
+   "id": "s4_8",
+   "from": 4,
+   "to": 8,
+   "type": "spouse"
+  },
+  {
+   "id": "p3_9",
+   "from": 3,
+   "to": 9,
+   "type": "parent"
+  },
+  {
+   "id": "p5_9",
+   "from": 5,
+   "to": 9,
+   "type": "parent"
+  },
+  {
+   "id": "p3_10",
+   "from": 3,
+   "to": 10,
+   "type": "parent"
+  },
+  {
+   "id": "p5_10",
+   "from": 5,
+   "to": 10,
+   "type": "parent"
+  },
+  {
+   "id": "p3_11",
+   "from": 3,
+   "to": 11,
+   "type": "parent"
+  },
+  {
+   "id": "p6_11",
+   "from": 6,
+   "to": 11,
+   "type": "parent"
+  },
+  {
+   "id": "p3_12",
+   "from": 3,
+   "to": 12,
+   "type": "parent"
+  },
+  {
+   "id": "p7_12",
+   "from": 7,
+   "to": 12,
+   "type": "parent"
+  },
+  {
+   "id": "p3_13",
+   "from": 3,
+   "to": 13,
+   "type": "parent"
+  },
+  {
+   "id": "p7_13",
+   "from": 7,
+   "to": 13,
+   "type": "parent"
+  },
+  {
+   "id": "p3_14",
+   "from": 3,
+   "to": 14,
+   "type": "parent"
+  },
+  {
+   "id": "p7_14",
+   "from": 7,
+   "to": 14,
+   "type": "parent"
+  },
+  {
+   "id": "p3_15",
+   "from": 3,
+   "to": 15,
+   "type": "parent"
+  },
+  {
+   "id": "p4_16",
+   "from": 4,
+   "to": 16,
+   "type": "parent"
+  },
+  {
+   "id": "p8_16",
+   "from": 8,
+   "to": 16,
+   "type": "parent"
+  },
+  {
+   "id": "p8_17",
+   "from": 8,
+   "to": 17,
+   "type": "parent"
+  },
+  {
+   "id": "s9_18",
+   "from": 9,
+   "to": 18,
+   "type": "spouse"
+  },
+  {
+   "id": "s19_20",
+   "from": 19,
+   "to": 20,
+   "type": "spouse"
+  },
+  {
+   "id": "p19_18",
+   "from": 19,
+   "to": 18,
+   "type": "parent"
+  },
+  {
+   "id": "p20_18",
+   "from": 20,
+   "to": 18,
+   "type": "parent"
+  },
+  {
+   "id": "p19_21",
+   "from": 19,
+   "to": 21,
+   "type": "parent"
+  },
+  {
+   "id": "p20_21",
+   "from": 20,
+   "to": 21,
+   "type": "parent"
+  },
+  {
+   "id": "p9_22",
+   "from": 9,
+   "to": 22,
+   "type": "parent"
+  },
+  {
+   "id": "p18_22",
+   "from": 18,
+   "to": 22,
+   "type": "parent"
+  },
+  {
+   "id": "p9_23",
+   "from": 9,
+   "to": 23,
+   "type": "parent"
+  },
+  {
+   "id": "p18_23",
+   "from": 18,
+   "to": 23,
+   "type": "parent"
+  },
+  {
+   "id": "p16_24",
+   "from": 16,
+   "to": 24,
+   "type": "parent"
+  },
+  {
+   "id": "p11_25",
+   "from": 11,
+   "to": 25,
+   "type": "parent"
+  },
+  {
+   "id": "p22_26",
+   "from": 22,
+   "to": 26,
+   "type": "parent"
+  },
+  {
+   "id": "p24_27",
+   "from": 24,
+   "to": 27,
+   "type": "parent"
+  },
+  {
+   "id": "s25_28",
+   "from": 25,
+   "to": 28,
+   "type": "spouse"
+  },
+  {
+   "id": "p25_29",
+   "from": 25,
+   "to": 29,
+   "type": "parent"
+  },
+  {
+   "id": "p28_29",
+   "from": 28,
+   "to": 29,
+   "type": "parent"
+  },
+  {
+   "id": "sib",
+   "from": 16,
+   "to": 30,
+   "type": "sibling"
+  },
+  {
+   "id": "oth",
+   "from": 10,
+   "to": 30,
+   "type": "other"
+  },
+  {
+   "id": "s31_32",
+   "from": 31,
+   "to": 32,
+   "type": "spouse"
+  },
+  {
+   "id": "p31_33",
+   "from": 31,
+   "to": 33,
+   "type": "parent"
+  },
+  {
+   "id": "p32_33",
+   "from": 32,
+   "to": 33,
+   "type": "parent"
+  },
+  {
+   "id": "p13_34",
+   "from": 13,
+   "to": 34,
+   "type": "parent"
+  }
+ ]
+}

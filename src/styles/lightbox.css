@@ -1,0 +1,60 @@
+/* просмотр фото */
+.lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    background: rgba(5, 7, 10, .9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 56px 72px;
+}
+
+.lightbox.open {
+    display: flex;
+    animation: fade .15s ease;
+}
+
+.lightbox img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+}
+
+.lightbox button {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .1);
+    border-color: transparent;
+    color: #fff;
+}
+
+.lightbox button:hover {
+    background: rgba(255, 255, 255, .2);
+}
+
+.lb-close {
+    top: 16px;
+    right: 16px;
+}
+
+.lb-prev {
+    left: 16px;
+}
+
+.lb-next {
+    right: 16px;
+}
+
+.lb-count {
+    position: absolute;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, .7);
+    font-size: 13px;
+}

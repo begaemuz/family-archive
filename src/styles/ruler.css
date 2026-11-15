@@ -1,0 +1,42 @@
+/* ================= ЛИНЕЙКА ПОКОЛЕНИЙ ================= */
+.ruler {
+    position: absolute;
+    left: 12px;
+    top: calc(var(--topbar-h) + 24px);
+    bottom: 12px;
+    width: 96px;
+    z-index: 4;
+    pointer-events: none;
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+}
+
+.ruler-item {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    padding: 0 14px;
+    text-align: right;
+    transform: translateY(-50%);
+    margin-top: calc(-1 * (var(--topbar-h) + 24px));
+}
+
+.ruler-year {
+    font-weight: 700;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+}
+
+.ruler-year.est {
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.ruler-gen {
+    font-size: 11px;
+    color: var(--muted);
+}

@@ -1,0 +1,209 @@
+/* ================= КАРТОЧКА НА ХОЛСТЕ ================= */
+.person {
+    --g: var(--neutral);
+    position: absolute;
+    width: 200px;
+    min-height: 190px;
+    text-align: center;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    z-index: 2;
+}
+
+.person:hover {
+    z-index: 6;
+}
+
+.person.dragging {
+    cursor: grabbing;
+    z-index: 7;
+}
+
+.person.male {
+    --g: var(--male);
+}
+
+.person.female {
+    --g: var(--female);
+}
+
+/* круг: цветная обводка по полу + светлый ореол (отделяет от фона и линий) + тень */
+.avatar-wrap {
+    position: relative;
+    width: 132px;
+    height: 132px;
+    margin: 0 auto 10px;
+    padding: 5px;
+    border-radius: 50%;
+    background: var(--panel);
+    border: 3px solid var(--g);
+    box-shadow:
+        0 0 0 5px var(--halo),
+        0 10px 24px -6px color-mix(in srgb, var(--g) 45%, transparent),
+        0 4px 10px rgba(0, 0, 0, .12);
+    transition: box-shadow .15s, transform .15s;
+}
+
+.person:hover .avatar-wrap {
+    box-shadow:
+        0 0 0 5px var(--halo),
+        0 0 0 9px color-mix(in srgb, var(--g) 22%, transparent),
+        0 14px 30px -6px color-mix(in srgb, var(--g) 55%, transparent);
+}
+
+.person.selected .avatar-wrap {
+    border-color: var(--accent);
+    box-shadow:
+        0 0 0 5px var(--halo),
+        0 0 0 10px var(--accent-soft),
+        0 14px 30px -6px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.avatar {
+    width: 100%;
+    height: 100%;
+    background: color-mix(in srgb, var(--g) 14%, var(--panel));
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -.5px;
+    color: var(--g);
+}
+
+/* фото в кругах не «утаскиваются» браузером (иначе ломается перемещение человека) */
+.canvas img,
+.side-panel img {
+    -webkit-user-drag: none;
+    user-select: none;
+}
+
+.avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.person-name {
+    display: inline-block;
+    max-width: 100%;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+    padding: 4px 12px;
+    border-radius: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+
+.person-years {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* кнопки управления вокруг аватара (60px) */
+.direction-btn {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--panel);
+    border: 1.5px solid var(--accent);
+    color: var(--accent);
+    box-shadow: var(--shadow);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 8;
+    transition: opacity .15s, background .15s, color .15s, transform .15s;
+    touch-action: none;
+}
+
+.direction-btn svg {
+    width: 26px !important;
+    height: 26px !important;
+}
+
+.person:hover .direction-btn {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+@media (hover: none) {
+    .person.selected .direction-btn {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
+.direction-btn:hover {
+    background: var(--accent);
+    color: var(--on-accent);
+    border-color: var(--accent);
+}
+
+.direction-up {
+    left: 50%;
+    top: -30px;
+    transform: translateX(-50%);
+}
+
+.direction-down {
+    left: 50%;
+    bottom: -30px;
+    transform: translateX(-50%);
+}
+
+.direction-left {
+    left: -30px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.direction-right {
+    right: -30px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.direction-btn.expand {
+    background: var(--accent);
+    color: var(--on-accent);
+    font-size: 16px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.direction-btn.expand:hover {
+    background: var(--accent-strong);
+}
+
+.person:hover .collapse-badge {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.collapse-badge {
+    transition: opacity .15s;
+    position: absolute;
+    left: 50%;
+    bottom: -14px;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: var(--on-accent);
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    z-index: 9;
+    box-shadow: 0 4px 12px -4px var(--accent);
+}

@@ -1,0 +1,37 @@
+{
+  "name": "family-archive",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Личный зашифрованный семейный архив: родословное древо, фото, видео, документы и истории в одном файле .family",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "build:single": "tsc --noEmit && vite build --mode single",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/inter": "5.1.0",
+    "fflate": "0.8.2",
+    "hash-wasm": "4.12.0",
+    "leaflet": "1.9.4",
+    "pdfmake": "0.2.14",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "zustand": "5.0.1"
+  },
+  "devDependencies": {
+    "@types/leaflet": "1.9.14",
+    "@types/pdfmake": "0.2.9",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@vitejs/plugin-react": "4.3.3",
+    "typescript": "5.6.3",
+    "vite": "5.4.11",
+    "vite-plugin-pwa": "0.21.0",
+    "vite-plugin-singlefile": "2.0.3",
+    "vitest": "2.1.5"
+  }
+}

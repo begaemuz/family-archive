@@ -1,0 +1,284 @@
+/* ================= ФОРМА: поля с заголовком внутри ================= */
+.form-section+.form-section {
+    margin-top: 28px;
+}
+
+.form-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+    color: var(--muted);
+    margin: 0 0 12px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.field.full {
+    grid-column: 1 / -1;
+}
+
+.field {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 9px 14px 8px;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+    cursor: text;
+}
+
+.field:hover {
+    border-color: var(--border-strong);
+}
+
+.field:focus-within {
+    border-color: var(--accent);
+    background: var(--panel);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.field label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 2px;
+    cursor: inherit;
+}
+
+.field:focus-within label {
+    color: var(--accent);
+}
+
+.field input,
+.field textarea,
+.field select {
+    width: 100%;
+    border: 0;
+    outline: none;
+    background: transparent;
+    padding: 2px 0;
+    font-size: 15px;
+    color: var(--text);
+}
+
+.field select {
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 10px) 55%, calc(100% - 5px) 55%;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 24px;
+}
+
+.field select option {
+    background: var(--panel);
+    color: var(--text);
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+    color: var(--faint);
+}
+
+.field textarea {
+    resize: vertical;
+    min-height: 120px;
+    line-height: 1.6;
+}
+
+/* фото в форме */
+.photo-card {
+    border: 1px dashed var(--border-strong);
+    background: var(--panel-2);
+    border-radius: var(--r);
+    padding: 16px;
+}
+
+.photo-main-content {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap; /* на узком экране текст и кнопки уходят под фото, а не за край */
+}
+
+.photo-main-content>div:last-child {
+    flex: 1 1 180px;
+    min-width: 0;
+}
+
+.side-panel .modal-body {
+    overflow-x: hidden;
+}
+
+.photo-card {
+    min-width: 0;
+}
+
+.photo-card button {
+    max-width: 100%;
+    white-space: normal;
+    height: auto;
+    min-height: 36px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+.photo-main-preview {
+    width: 88px;
+    height: 88px;
+    flex: none;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--panel-3);
+    display: grid;
+    place-items: center;
+    color: var(--faint);
+    border: 2px solid var(--ring);
+}
+
+.photo-main-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.photo-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.photo-hint {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 12px;
+}
+
+.photo-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.photo-actions button {
+    height: 36px;
+    font-size: 13px;
+}
+
+.photo-gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.photo-gallery:not(:empty) {
+    margin-bottom: 14px;
+}
+
+.photo-thumb {
+    position: relative;
+    width: 84px;
+    height: 84px;
+}
+
+.photo-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+}
+
+.photo-thumb button {
+    position: absolute;
+    right: -6px;
+    top: -6px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--danger);
+    color: #fff;
+    border: 2px solid var(--panel);
+    font-size: 14px;
+}
+
+.advanced-toggle {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 24px;
+    height: 48px;
+    padding: 0 16px;
+    border-radius: var(--r);
+    background: var(--panel-2);
+}
+
+.advanced-toggle .chev {
+    transition: transform .2s;
+}
+
+.advanced-toggle.open .chev {
+    transform: rotate(180deg);
+}
+
+.advanced-fields {
+    display: none;
+    margin-top: 12px;
+}
+
+.advanced-fields.open {
+    display: block;
+}
+
+/* выбор типа связи */
+.rel-choices {
+    display: grid;
+    gap: 10px;
+}
+
+.rel-choice {
+    height: auto;
+    justify-content: flex-start;
+    text-align: left;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: var(--r);
+    background: var(--panel-2);
+}
+
+.rel-choice:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.rel-choice .rel-ico {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: var(--panel);
+    color: var(--accent);
+    border: 1px solid var(--border);
+    flex: none;
+}
+
+.rel-choice b {
+    display: block;
+    font-weight: 600;
+}
+
+.rel-choice small {
+    color: var(--muted);
+    font-size: 12px;
+}

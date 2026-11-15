@@ -1,0 +1,145 @@
+/* ================= АДАПТИВ ================= */
+@media (max-width: 1100px) {
+    .topbar .label {
+        display: none;
+    }
+
+    .topbar button:not(.primary) {
+        width: 40px;
+        padding: 0;
+    }
+
+    /* «Подключить папку» — с подписью, иначе непонятно, что это */
+    .topbar button.reconnect {
+        width: auto;
+        padding: 0 12px;
+    }
+}
+
+@media (max-width: 700px) {
+    .topbar button.reconnect {
+        width: 40px;
+        padding: 0;
+    }
+
+    .topbar button.reconnect span {
+        display: none;
+    }
+}
+
+@media (max-width: 700px) {
+    :root {
+        --topbar-h: 56px;
+    }
+
+    .topbar {
+        top: 8px;
+        left: 8px;
+        right: 8px;
+        gap: 4px;
+        padding: 0 8px;
+    }
+
+    .brand small,
+    .brand-text,
+    .topbar .sep,
+    .status {
+        display: none;
+    }
+
+    .topbar button.primary .label {
+        display: none;
+    }
+
+    .topbar button.primary {
+        width: 40px;
+        padding: 0;
+    }
+
+    /* на телефоне линейка поколений занимает слишком много места — скрываем */
+    .ruler {
+        display: none;
+    }
+
+    .ruler-item {
+        padding: 0 8px;
+    }
+
+    .ruler-year {
+        font-size: 12px;
+    }
+
+    .ruler-gen {
+        font-size: 10px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-body {
+        padding: 16px;
+    }
+
+    .modal-header,
+    .modal-footer {
+        padding: 14px 16px;
+    }
+
+    .side-panel {
+        top: auto;
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        width: auto;
+        height: 72vh;
+        transform: translateY(calc(100% + 16px));
+    }
+
+    body.panel-open .canvas-controls {
+        right: 16px;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .sp-head {
+        padding: 16px 16px 14px;
+    }
+
+    .sp-head {
+        padding: 8px 10px 14px 16px;
+    }
+
+    .sp-avatar {
+        width: 64px;
+        height: 64px;
+    }
+
+    .sp-name {
+        font-size: 16px;
+    }
+
+    .tabs {
+        padding: 4px 8px 0;
+        gap: 0;
+    }
+
+    .tab {
+        padding: 0 6px;
+        font-size: 13px;
+    }
+
+    .tab .count {
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+    }
+
+    .sp-body {
+        padding: 16px;
+    }
+
+    .lightbox {
+        padding: 56px 8px;
+    }
+}
