@@ -978,26 +978,55 @@ body.panel-open .action-dock {
     color: var(--text);
 }
 
-/* есть несохранённые изменения — «Сохранить» подсвечена */
-.dock-btn.attention {
+/* есть несохранённые изменения — «Сохранить» с жёлтым индикатором; ошибка — красным */
+.dock-btn.unsaved,
+.dock-btn.save-error {
     color: var(--text);
 }
 
-.dock-btn.attention .dock-ico {
-    background: var(--accent-soft);
-    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-    color: var(--accent);
+.dock-btn.unsaved .dock-ico {
+    border-color: color-mix(in srgb, #f5b82e 70%, transparent);
+    background: color-mix(in srgb, #f5b82e 14%, var(--panel-2));
+}
+
+.dock-btn.save-error .dock-ico {
+    border-color: color-mix(in srgb, var(--danger) 70%, transparent);
+    background: var(--danger-soft);
+    color: var(--danger);
 }
 
 .dock-dot {
     position: absolute;
-    top: -3px;
-    right: -3px;
-    width: 10px;
-    height: 10px;
+    top: -4px;
+    right: -4px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
-    background: #e3a23b;
+    background: #f5b82e;
     border: 2px solid var(--panel);
+    box-shadow: 0 0 0 0 rgba(245, 184, 46, .55);
+    animation: dock-pulse 2s ease-out infinite;
+}
+
+.dock-btn.save-error .dock-dot {
+    background: var(--danger);
+    animation: none;
+}
+
+@keyframes dock-pulse {
+    70% {
+        box-shadow: 0 0 0 7px rgba(245, 184, 46, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(245, 184, 46, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dock-dot {
+        animation: none;
+    }
 }
 
 .dock-count {

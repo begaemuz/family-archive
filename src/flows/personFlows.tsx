@@ -15,6 +15,16 @@ export async function confirmLeaveForm(): Promise<boolean> {
   return ok === true;
 }
 
+/** Клик мимо — закрыть карточку человека (с вопросом, если в форме есть правки) и панель историй.
+    Историю в режиме редактирования не закрываем, чтобы не потерять текст. */
+export async function closeSidePanelsFlow() {
+  if (ui().panel.open) {
+    if (!(await confirmLeaveForm())) return;
+    ui().closePanel();
+  }
+  if (ui().storiesOpen && !document.querySelector('.stories-panel.form-mode')) ui().setStoriesOpen(false);
+}
+
 export async function addPersonFlow() {
   if (!(await confirmLeaveForm())) return;
   const c = worldCenter();

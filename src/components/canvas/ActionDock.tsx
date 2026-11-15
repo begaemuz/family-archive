@@ -5,37 +5,16 @@ import { useUi } from '../../store/uiStore';
 import { Icon } from '../../ui/Icon';
 import { SAVE_TEXT } from '../app/SaveStatus';
 
-/** Правая панель действий — по центру справа, как линейка поколений слева. */
+/** Правая панель действий — по центру справа, как линейка поколений слева.
+    Порядок: Истории, Выровнять | Сохранить, Добавить. Несохранённые изменения — жёлтый индикатор на «Сохранить». */
 export function ActionDock() {
   const status = useArchive(s => s.status);
   const storiesOpen = useUi(s => s.storiesOpen);
   const storyCount = useArchive(s => s.data?.stories.length ?? 0);
-  const unsaved = status === 'dirty' || status === 'error';
+  const saveState = status === 'dirty' ? ' unsaved' : status === 'error' ? ' save-error' : '';
 
   return (
     <nav className="action-dock" aria-label="Действия">
-      <button
-        className={'dock-btn' + (unsaved ? ' attention' : '')}
-        title={`Сохранить архив (Ctrl+S) — ${SAVE_TEXT[status].toLowerCase()}`}
-        disabled={status === 'saving'}
-        onClick={() => useSession.getState().save()}
-      >
-        <span className="dock-ico">
-          <Icon name="save" size={20} />
-          {unsaved && <span className="dock-dot" />}
-        </span>
-        <span className="dock-label">{status === 'saving' ? 'Сохраняю' : 'Сохранить'}</span>
-      </button>
-
-      <button className="dock-btn primary-dock" title="Добавить человека" onClick={() => addPersonFlow()}>
-        <span className="dock-ico">
-          <Icon name="plus" size={22} />
-        </span>
-        <span className="dock-label">Добавить</span>
-      </button>
-
-      <span className="dock-sep" />
-
       <button
         className={'dock-btn' + (storiesOpen ? ' active' : '')}
         title="Семейные истории"
@@ -62,6 +41,29 @@ export function ActionDock() {
           <Icon name="layout" size={20} />
         </span>
         <span className="dock-label">Выровнять</span>
+      </button>
+
+      <span className="dock-sep" />
+
+      <button
+        className={'dock-btn' + saveState}
+        title={`Сохранить архив (Ctrl+S) — ${SAVE_TEXT[status].toLowerCase()}`}
+        aria-label={`Сохранить архив. ${SAVE_TEXT[status]}`}
+        disabled={status === 'saving'}
+        onClick={() => useSession.getState().save()}
+      >
+        <span className="dock-ico">
+          <Icon name="save" size={20} />
+          {saveState && <span className="dock-dot" />}
+        </span>
+        <span className="dock-label">{status === 'saving' ? 'Сохраняю' : 'Сохранить'}</span>
+      </button>
+
+      <button className="dock-btn primary-dock" title="Добавить человека" onClick={() => addPersonFlow()}>
+        <span className="dock-ico">
+          <Icon name="plus" size={22} />
+        </span>
+        <span className="dock-label">Добавить</span>
       </button>
     </nav>
   );

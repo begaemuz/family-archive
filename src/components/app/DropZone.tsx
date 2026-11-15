@@ -4,7 +4,7 @@ import { useSession } from '../../store/sessionStore';
 import { useUi } from '../../store/uiStore';
 import { Icon } from '../../ui/Icon';
 
-/** Перетаскивание файла .family (или старого ZIP/JSON) на страницу. Перетаскивание внутри страницы игнорируется. */
+/** Перетаскивание файла .family на страницу. Перетаскивание внутри страницы игнорируется. */
 export function DropZone() {
   const [show, setShow] = useState(false);
   const depth = useRef(0);
@@ -50,13 +50,7 @@ export function DropZone() {
         return;
       }
       if (name.endsWith('.family')) useSession.getState().chooseFile(file, null);
-      else if (name.endsWith('.zip') || name.endsWith('.json')) {
-        try {
-          await useSession.getState().importLegacy(file);
-        } catch (err) {
-          ui.showToast('Не удалось прочитать: ' + ((err as Error).message || 'ошибка'));
-        }
-      } else ui.showToast('Нужен файл .family (или старый ZIP/JSON для переноса)');
+      else ui.showToast('Нужен файл архива .family');
     };
     window.addEventListener('dragstart', onStart);
     window.addEventListener('dragend', onEnd);
@@ -81,7 +75,7 @@ export function DropZone() {
           <Icon name="download" size={32} />
         </div>
         Отпустите файл, чтобы открыть архив
-        <small>Файл .family или старый ZIP / JSON</small>
+        <small>Файл архива .family</small>
       </div>
     </div>
   );

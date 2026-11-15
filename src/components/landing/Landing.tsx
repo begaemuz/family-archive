@@ -1,6 +1,18 @@
 import type { ReactNode } from 'react';
 import { useUi } from '../../store/uiStore';
 import { Icon } from '../../ui/Icon';
+import { Logo } from '../../ui/Logo';
+// Фото: Unsplash (unsplash.com), лицензия Unsplash — свободное использование
+import imgGrandpa from '../../assets/landing/grandpa.webp';
+import imgGrandma from '../../assets/landing/grandma.webp';
+import imgDad from '../../assets/landing/dad.webp';
+import imgMom from '../../assets/landing/mom.webp';
+import imgAunt from '../../assets/landing/aunt.webp';
+import imgSon from '../../assets/landing/son.webp';
+import imgDaughter from '../../assets/landing/daughter.webp';
+import imgAlbum from '../../assets/landing/album.webp';
+import imgSeniors from '../../assets/landing/seniors.webp';
+import imgGrandmaBaby from '../../assets/landing/grandma-baby.webp';
 
 const REPO = 'https://github.com/begaemuz/family-archive';
 
@@ -35,7 +47,7 @@ export function LandingHeader({ home, onHome, onOpen }: { home: boolean; onHome(
     <header className="lp-header">
       <button className="lp-brand" onClick={onHome} title="На главную">
         <span className="brand-logo">
-          <Icon name="tree" />
+          <Logo size={36} />
         </span>
         Семейный архив
       </button>
@@ -59,31 +71,37 @@ export function LandingHeader({ home, onHome, onOpen }: { home: boolean; onHome(
   );
 }
 
-/** Иллюстрация: три поколения в кругах, как на холсте. */
+/** Иллюстрация: три поколения с фотографиями в кругах — как карточки на холсте. */
 function HeroTree() {
-  const nodes: [number, number, 'm' | 'f', string][] = [
-    [120, 60, 'm', 'ИП'],
-    [220, 60, 'f', 'АС'],
-    [70, 175, 'f', 'ОИ'],
-    [170, 175, 'm', 'ВИ'],
-    [270, 175, 'f', 'МК'],
-    [120, 290, 'm', 'СВ'],
-    [220, 290, 'f', 'ЕВ'],
+  const R = 30;
+  const nodes: [number, number, 'm' | 'f', string, string][] = [
+    [120, 58, 'm', imgGrandpa, 'Дедушка'],
+    [220, 58, 'f', imgGrandma, 'Бабушка'],
+    [70, 178, 'f', imgAunt, 'Тётя'],
+    [170, 178, 'm', imgDad, 'Папа'],
+    [270, 178, 'f', imgMom, 'Мама'],
+    [170, 298, 'm', imgSon, 'Сын'],
+    [270, 298, 'f', imgDaughter, 'Дочь'],
   ];
   return (
-    <svg className="lp-tree" viewBox="0 0 340 350" role="img" aria-label="Пример родословного древа">
+    <svg className="lp-tree" viewBox="0 0 340 372" role="img" aria-label="Пример родословного древа с фотографиями">
+      <defs>
+        <clipPath id="lp-av">
+          <circle cx="0" cy="0" r={R - 3} />
+        </clipPath>
+      </defs>
       <g fill="none" strokeWidth="2.5" strokeLinecap="round">
-        <path d="M150 60 H190" stroke="var(--line-spouse)" />
-        <path d="M170 60 V118 M70 118 H170 M70 118 V147 M170 118 V147" stroke="var(--line-parent)" />
-        <path d="M200 175 H240" stroke="var(--line-spouse)" />
-        <path d="M220 175 V233 M120 233 H220 M120 233 V262 M220 233 V262" stroke="var(--line-parent)" />
+        <path d="M150 58 H190" stroke="var(--line-spouse)" />
+        <path d="M170 58 V118 M70 118 H170 M70 118 V148 M170 118 V148" stroke="var(--line-parent)" />
+        <path d="M200 178 H240" stroke="var(--line-spouse)" />
+        <path d="M220 178 V238 M170 238 H270 M170 238 V268 M270 238 V268" stroke="var(--line-parent)" />
       </g>
-      {nodes.map(([x, y, g, t]) => (
-        <g key={t}>
-          <circle cx={x} cy={y} r="29" fill="var(--panel)" stroke={g === 'm' ? 'var(--male)' : 'var(--female)'} strokeWidth="3" />
-          <circle cx={x} cy={y} r="24" fill={g === 'm' ? 'var(--male)' : 'var(--female)'} opacity=".14" />
-          <text x={x} y={y + 5} textAnchor="middle" fontSize="15" fontWeight="700" fill={g === 'm' ? 'var(--male)' : 'var(--female)'}>
-            {t}
+      {nodes.map(([x, y, g, src, label]) => (
+        <g key={label} transform={`translate(${x} ${y})`}>
+          <circle r={R} fill="var(--panel)" stroke={g === 'm' ? 'var(--male)' : 'var(--female)'} strokeWidth="3" />
+          <image href={src} x={-(R - 3)} y={-(R - 3)} width={(R - 3) * 2} height={(R - 3) * 2} clipPath="url(#lp-av)" preserveAspectRatio="xMidYMid slice" />
+          <text y={R + 16} textAnchor="middle" fontSize="11.5" fontWeight="600" fill="var(--muted)">
+            {label}
           </text>
         </g>
       ))}
@@ -91,16 +109,20 @@ function HeroTree() {
   );
 }
 
+const MOMENTS: { src: string; title: string; text: string }[] = [
+  { src: imgAlbum, title: 'Старые фотографии', text: 'Отсканируйте семейный альбом, пока снимки не выцвели, и подпишите, кто на них.' },
+  { src: imgSeniors, title: 'Рассказы старших', text: 'Запишите голос бабушки и дедушки — как они познакомились, где жили, чем гордились.' },
+  { src: imgGrandmaBaby, title: 'Новые поколения', text: 'Добавляйте внуков и правнуков — у каждого будет своё место в истории семьи.' },
+];
+
 export function Landing({
   draftCard,
   onCreate,
   onOpen,
-  onImport,
 }: {
   draftCard: ReactNode;
   onCreate(): void;
   onOpen(): void;
-  onImport(): void;
 }) {
   const offline = import.meta.env.PROD;
   return (
@@ -127,9 +149,6 @@ export function Landing({
             </button>
           </div>
           <div className="lp-cta-sub">
-            <button className="lp-link" onClick={onImport}>
-              <Icon name="upload" size={15} /> Перенести дерево из старой версии
-            </button>
             <span className="lp-drop">
               <Icon name="download" size={15} /> или перетащите файл на страницу
             </span>
@@ -148,6 +167,23 @@ export function Landing({
               <Icon name="audio" size={14} /> Голоса родных
             </span>
           </div>
+        </div>
+      </section>
+
+      {/* ---------- лица и голоса ---------- */}
+      <section className="lp-section" id="moments">
+        <h2>Сохраните то, что нельзя купить</h2>
+        <p className="lp-section-sub">Лица, голоса и истории родных — в одном месте, на поколения вперёд</p>
+        <div className="lp-moments">
+          {MOMENTS.map(m => (
+            <figure className="lp-moment" key={m.title}>
+              <img src={m.src} alt="" loading="lazy" width={960} height={640} />
+              <figcaption>
+                <h3>{m.title}</h3>
+                <p>{m.text}</p>
+              </figcaption>
+            </figure>
+          ))}
         </div>
       </section>
 
@@ -216,7 +252,7 @@ export function Landing({
       </section>
 
       <footer className="lp-footer">
-        <span>Семейный архив — открытый проект</span>
+        <span>Семейный архив — открытый проект · Фото: Unsplash</span>
         <span className="lp-footer-links">
           <a href={REPO} target="_blank" rel="noopener noreferrer">
             Исходный код на GitHub

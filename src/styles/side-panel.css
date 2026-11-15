@@ -1,7 +1,7 @@
 /* ================= БОКОВАЯ ПАНЕЛЬ ЧЕЛОВЕКА ================= */
 .side-panel {
     position: fixed;
-    top: calc(var(--topbar-h) + 24px);
+    top: 12px;
     right: 12px;
     bottom: 12px;
     width: min(520px, calc(100vw - 24px));

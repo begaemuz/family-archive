@@ -34,15 +34,6 @@ export function StartScreen() {
     const r = await pickArchiveFile();
     if (r) useSession.getState().chooseFile(r.file, r.handle);
   };
-  const importOld = async () => {
-    const [f] = await pickFiles('.zip,.json');
-    if (!f) return;
-    try {
-      await useSession.getState().importLegacy(f);
-    } catch (e) {
-      useUi.getState().showToast(errText(e));
-    }
-  };
 
   const draftCard = draft && (
     <div className="draft-card">
@@ -88,7 +79,7 @@ export function StartScreen() {
     <div className={'start-screen' + (home ? ' is-home' : '')}>
       <LandingHeader home={home} onHome={goHome} onOpen={openFile} />
       {home ? (
-        <Landing draftCard={draftCard} onCreate={() => setView('create')} onOpen={openFile} onImport={importOld} />
+        <Landing draftCard={draftCard} onCreate={() => setView('create')} onOpen={openFile} />
       ) : (
         <div className="start-center">{body}</div>
       )}

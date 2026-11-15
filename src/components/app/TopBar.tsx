@@ -1,19 +1,17 @@
-import { Icon } from '../../ui/Icon';
+import { Logo } from '../../ui/Logo';
 import { ArchiveMenu } from './ArchiveMenu';
-import { SaveStatus } from './SaveStatus';
 
-/** Верхняя плашка открытого архива: логотип, меню архива и состояние сохранения.
-    Действия — в правой панели (ActionDock), масштаб и тема — в нижней правой. */
+/** Верхняя плашка открытого архива: логотип и меню архива.
+    Действия и индикатор несохранённых изменений — в правой панели (ActionDock), масштаб и тема — в нижней правой. */
 export function TopBar() {
   return (
     <header className="topbar has-archive">
       <div className="brand">
         <div className="brand-logo">
-          <Icon name="tree" />
+          <Logo size={34} />
         </div>
       </div>
       <ArchiveMenu />
-      <SaveStatus />
     </header>
   );
 }

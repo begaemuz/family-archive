@@ -60,7 +60,7 @@ export default defineConfig(({ mode }) => {
             VitePWA({
               registerType: 'autoUpdate',
               injectRegister: 'script-defer',
-              includeAssets: ['icon.svg'],
+              includeAssets: ['icon.svg', 'logo.svg', 'logo-512.png'],
               manifest: {
                 name: 'Семейный архив',
                 short_name: 'Семья',
@@ -70,10 +70,13 @@ export default defineConfig(({ mode }) => {
                 background_color: '#0e1117',
                 display: 'standalone',
                 start_url: './',
-                icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+                icons: [
+                  { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+                  { src: 'logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+                ],
               },
               workbox: {
-                globPatterns: ['**/*.{js,css,html,woff,woff2,svg}'],
+                globPatterns: ['**/*.{js,css,html,woff,woff2,svg,webp,png}'],
                 // pdfmake и шрифты PDF — крупные, но тоже нужны офлайн
                 maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
                 navigateFallback: 'index.html',

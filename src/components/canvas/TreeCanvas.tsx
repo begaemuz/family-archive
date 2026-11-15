@@ -6,7 +6,7 @@ import { freeX, guideLines } from '../../domain/layout';
 import { useArchive } from '../../store/archiveStore';
 import { useUi } from '../../store/uiStore';
 import { clientToWorld, registerCanvas, visibleArea } from '../../flows/canvasGeometry';
-import { createRelativeFlow, editPersonFlow, viewPersonFlow } from '../../flows/personFlows';
+import { closeSidePanelsFlow, createRelativeFlow, editPersonFlow, viewPersonFlow } from '../../flows/personFlows';
 import { PersonCard, type CardActions } from './PersonCard';
 import { GenerationRuler } from './GenerationRuler';
 import { CanvasControls } from './CanvasControls';
@@ -194,8 +194,11 @@ export function TreeCanvas() {
         else createRelativeFlow(l.from);
       }
       if (pan.current && e.pointerId === pan.current.pointerId) {
+        const p = pan.current;
         pan.current = null;
         setPanning(false);
+        // щелчок по пустому месту (без перетаскивания) — закрыть карточку, как модальное окно
+        if (Math.hypot(e.clientX - p.x, e.clientY - p.y) < 4) closeSidePanelsFlow();
       }
     };
     const onCancel = (e: PointerEvent) => {
@@ -246,7 +249,10 @@ export function TreeCanvas() {
           suppressClick.current = null;
           return;
         }
-        useUi.getState().select(id); // клик только выделяет (карточка — по «глазу»)
+        const ui = useUi.getState();
+        // карточка уже открыта — переключаем её на этого человека; иначе клик только выделяет (карточка — по «глазу»)
+        if (ui.panel.open && !ui.panel.form && ui.panel.personId !== id) viewPersonFlow(id);
+        else ui.select(id);
       },
       onView: id => viewPersonFlow(id),
       onEdit: id => editPersonFlow(id),
