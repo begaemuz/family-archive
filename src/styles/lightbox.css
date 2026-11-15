@@ -444,22 +444,10 @@
     }
 }
 
-/* отмеченные люди: при большом числе — прокрутка внутри строки, фото остаётся видно */
-.lb-chips {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    gap: 6px;
-    max-width: 100%;
-    max-height: min(26vh, 168px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-}
-
-.lb-chips:empty {
-    display: none;
+.lightbox .lb-people .lb-chip.more {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, .3);
+    color: rgba(255, 255, 255, .85);
 }
 
 .lightbox .lb-people .lb-rescan {

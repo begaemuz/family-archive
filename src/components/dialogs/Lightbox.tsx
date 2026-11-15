@@ -25,6 +25,8 @@ function MediaYear({ item, readOnly, hint }: { item: MediaItem; readOnly: boolea
   );
 }
 
+const TAGS_SHOWN = 8;
+
 /** «На фото:» — владелец альбома и отмеченные люди; можно отметить ещё кого-то.
     Отмеченным фото/видео показывается у них во вкладке «Медиа». */
 function PhotoPeople({ item, scan, onOpenPerson }: { item: MediaItem; scan: FaceScan; onOpenPerson(id: string): void }) {
@@ -36,6 +38,9 @@ function PhotoPeople({ item, scan, onOpenPerson }: { item: MediaItem; scan: Face
   const ownerId = useMemo(() => mediaOwnerId(persons, item.id), [persons, item.id]);
   const owner = ownerId ? persons.find(p => p.id === ownerId) : null;
   const tagged = item.people.map(id => persons.find(p => p.id === id)).filter((p): p is NonNullable<typeof p> => !!p);
+  // много отмеченных — показываем первых, остальные по кнопке «ещё N» (строка не разрастается на пол-экрана)
+  const [showAll, setShowAll] = useState(false);
+  const shown = showAll ? tagged : tagged.slice(0, TAGS_SHOWN);
   const found = useMemo(() => {
     const t = q.trim().toLowerCase();
     if (!t) return [];
@@ -48,6 +53,7 @@ function PhotoPeople({ item, scan, onOpenPerson }: { item: MediaItem; scan: Face
   useEffect(() => {
     setAdding(false);
     setQ('');
+    setShowAll(false);
   }, [item.id]);
   useEffect(() => {
     if (adding) inputRef.current?.focus();
@@ -64,25 +70,28 @@ function PhotoPeople({ item, scan, onOpenPerson }: { item: MediaItem; scan: Face
       <span className="lb-people-title">
         <Icon name="users" size={15} /> На фото:
       </span>
-      <div className="lb-chips">
-        {owner && (
-          <button className="lb-chip owner" title="Фото в альбоме этого человека — открыть карточку" onClick={() => onOpenPerson(owner.id)}>
-            {fullName(owner)}
+      {owner && (
+        <button className="lb-chip owner" title="Фото в альбоме этого человека — открыть карточку" onClick={() => onOpenPerson(owner.id)}>
+          {fullName(owner)}
+        </button>
+      )}
+      {shown.map(p => (
+        <span className="lb-chip" key={p.id}>
+          <button className="lb-chip-name" title="Открыть карточку" onClick={() => onOpenPerson(p.id)}>
+            {fullName(p)}
           </button>
-        )}
-        {tagged.map(p => (
-          <span className="lb-chip" key={p.id}>
-            <button className="lb-chip-name" title="Открыть карточку" onClick={() => onOpenPerson(p.id)}>
-              {fullName(p)}
+          {editable && (
+            <button className="lb-chip-x" title="Убрать отметку" onClick={() => setPeople(item.people.filter(x => x !== p.id))}>
+              <Icon name="x" size={13} />
             </button>
-            {editable && (
-              <button className="lb-chip-x" title="Убрать отметку" onClick={() => setPeople(item.people.filter(x => x !== p.id))}>
-                <Icon name="x" size={13} />
-              </button>
-            )}
-          </span>
-        ))}
-      </div>
+          )}
+        </span>
+      ))}
+      {tagged.length > shown.length && (
+        <button className="lb-chip more" title="Показать всех" onClick={() => setShowAll(true)}>
+          ещё {tagged.length - shown.length}
+        </button>
+      )}
       {!editable ? null : !adding ? (
         <>
           <button className="lb-chip add" onClick={() => setAdding(true)}>
