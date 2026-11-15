@@ -115,6 +115,8 @@ export interface MediaFace {
   p?: string;
   /** кого система предлагает: «Кажется, это …?» */
   s?: string;
+  /** кем это лицо точно не является (ответ «Это не …») */
+  n?: string[];
 }
 
 export interface MediaItem {

@@ -94,3 +94,30 @@ describe('лица на фото сохраняются в архиве', () => 
     expect(normalizeMedia({ id, kind: 'photo' })!.faces).toBeUndefined();
   });
 });
+
+describe('исправление неверного узнавания', () => {
+  const d = btoa(String.fromCharCode(...new Uint8Array(new Float32Array(128).fill(0.25).buffer)));
+  const face = { x: 0.1, y: 0.1, w: 0.1, h: 0.1, d };
+
+  it('«Это не …» снимает человека с лица и запоминает, «Это …» ставит другого и отмечает его на фото', () => {
+    const { data, wife, son, photo } = sample();
+    // ребёнка узнали как маму
+    photo.faces = [{ ...face, p: wife.id }, { ...face }];
+    useArchive.getState().open(data, new Map());
+    const st = () => useArchive.getState().data!.media[0];
+
+    useArchive.getState().unassignFace(photo.id, 0);
+    expect(st().faces![0].p).toBeUndefined();
+    expect(st().faces![0].n).toEqual([wife.id]);
+    expect(st().people).toEqual([wife.id]); // мама на фото остаётся отмеченной
+
+    useArchive.getState().assignFace(photo.id, 0, son.id);
+    expect(st().faces![0].p).toBe(son.id);
+    expect(st().people).toContain(son.id);
+
+    // тот же человек на другом лице — с прежнего снимается: один человек — одно лицо
+    useArchive.getState().assignFace(photo.id, 1, son.id);
+    expect(st().faces![0].p).toBeUndefined();
+    expect(st().faces![1].p).toBe(son.id);
+  });
+});

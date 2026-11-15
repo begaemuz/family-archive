@@ -199,7 +199,7 @@ export function Lightbox() {
           if (matchMedia('(hover: none)').matches) setFacesOn(v => !v);
         }}>
           <img src={url} alt={item.name} />
-          <FaceBoxes scan={scan} />
+          <FaceBoxes scan={scan} item={item} />
         </div>
       )}
       {item.kind === 'video' && url && <video key={id} src={url} controls autoPlay playsInline className="lb-media" />}

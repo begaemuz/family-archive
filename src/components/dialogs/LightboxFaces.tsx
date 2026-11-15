@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { fullName } from '../../domain/people';
 import type { MediaItem } from '../../domain/types';
 import { facesAvailable, matchFaces, savedMatches, toMediaFaces, type FaceMatch } from '../../faces/faces';
@@ -53,25 +53,109 @@ export function useFaceScan(item: MediaItem | undefined, enabled: boolean, auto:
   return { status, msg, matches: saved ?? [], canAsk: canRun, hover, setHover, run };
 }
 
-/** Рамки лиц поверх фото: узнанные — с именем, предложения — с вопросом. */
-export function FaceBoxes({ scan }: { scan: FaceScan }) {
+/** Рамки лиц поверх фото: узнанные — с именем, предложения — с вопросом.
+    Клик по рамке — «Кто это?»: исправить, если узнали неверно. */
+export function FaceBoxes({ scan, item }: { scan: FaceScan; item: MediaItem }) {
   const persons = useArchive(s => s.data!.persons);
+  const [menu, setMenu] = useState<number | null>(null);
+  useEffect(() => setMenu(null), [item.id]);
   const name = (id: string) => {
     const p = persons.find(x => x.id === id);
     return p ? p.firstName || fullName(p) : '';
   };
   if (!scan.matches.length) return null;
   return (
-    <div className={'lb-faces' + (scan.hover !== null ? ' show' : '')} aria-hidden>
+    <div className={'lb-faces' + (scan.hover !== null || menu !== null ? ' show' : '') + (scan.canAsk ? ' editable' : '')}>
       {scan.matches.map((m, i) => (
         <div
           key={i}
-          className={'lb-face' + (m.knownId ? ' known' : m.suggestId ? ' suggest' : '') + (scan.hover === i ? ' hot' : '')}
+          className={'lb-face' + (m.knownId ? ' known' : m.suggestId ? ' suggest' : '') + (scan.hover === i || menu === i ? ' hot' : '')}
           style={{ left: `${m.face.box.x * 100}%`, top: `${m.face.box.y * 100}%`, width: `${m.face.box.w * 100}%`, height: `${m.face.box.h * 100}%` }}
+          title={scan.canAsk ? 'Кто это? Нажмите, чтобы исправить' : undefined}
+          onClick={e => {
+            if (!scan.canAsk) return;
+            e.stopPropagation();
+            setMenu(menu === i ? null : i);
+          }}
         >
           {(m.knownId || m.suggestId) && <span className="lb-face-name">{m.knownId ? name(m.knownId) : `${name(m.suggestId!)}?`}</span>}
         </div>
       ))}
+      {menu !== null && scan.matches[menu] && <FaceMenu item={item} index={menu} match={scan.matches[menu]} onClose={() => setMenu(null)} />}
+    </div>
+  );
+}
+
+/** «Кто это?» у одного лица: это не тот / это вот этот человек. */
+function FaceMenu({ item, index, match, onClose }: { item: MediaItem; index: number; match: FaceMatch; onClose(): void }) {
+  const data = useArchive(s => s.data!);
+  const [q, setQ] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+  const current = match.knownId ?? match.suggestId;
+  const cur = current ? data.persons.find(p => p.id === current) : null;
+  const ownerId = data.persons.find(p => p.media.includes(item.id))?.id ?? null;
+  const not = new Set(match.not ?? []);
+
+  const list = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    const onPhoto = [...(ownerId ? [ownerId] : []), ...item.people];
+    const pool = t ? data.persons.filter(p => fullName(p).toLowerCase().includes(t)) : onPhoto.map(id => data.persons.find(p => p.id === id)!).filter(Boolean);
+    return pool.filter(p => p.id !== current).slice(0, 8);
+  }, [q, data.persons, item.people, ownerId, current]);
+
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && !(e.target as HTMLElement).closest?.('.lb-face') && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('pointerdown', onDown, true);
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('pointerdown', onDown, true);
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [onClose]);
+
+  const b = match.face.box;
+  // меню под лицом; если лицо внизу снимка — над ним
+  const below = b.y + b.h < 0.6;
+  const style = { left: `${Math.min(Math.max(b.x + b.w / 2, 0.12), 0.88) * 100}%`, ...(below ? { top: `calc(${(b.y + b.h) * 100}% + 10px)` } : { bottom: `calc(${(1 - b.y) * 100}% + 10px)` }) };
+  const st = useArchive.getState();
+
+  return (
+    <div className="lb-face-menu" ref={ref} style={style} onClick={e => e.stopPropagation()}>
+      <div className="lb-face-menu-title">Кто это?</div>
+      {cur && (
+        <button
+          className="lb-face-menu-wrong"
+          onClick={() => {
+            st.unassignFace(item.id, index);
+            onClose();
+          }}
+        >
+          <Icon name="x" size={14} /> Это не {fullName(cur)}
+        </button>
+      )}
+      <input value={q} placeholder="Найти человека…" autoFocus onChange={e => setQ(e.target.value)} />
+      <div className="lb-face-menu-list">
+        {!q.trim() && list.length > 0 && <div className="lb-face-menu-hint">Отмечены на фото</div>}
+        {list.map(p => (
+          <button
+            key={p.id}
+            className={not.has(p.id) ? 'was-not' : ''}
+            onClick={() => {
+              st.assignFace(item.id, index, p.id);
+              onClose();
+            }}
+          >
+            <Icon name="user" size={14} /> {fullName(p)}
+          </button>
+        ))}
+        {!list.length && <div className="lb-face-menu-hint">{q.trim() ? 'Никого не нашлось' : 'Начните вводить имя'}</div>}
+      </div>
     </div>
   );
 }

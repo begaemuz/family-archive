@@ -65,6 +65,10 @@ interface ArchiveState {
   confirmFace(mediaId: string, index: number): void;
   /** «Нет»: не предлагать этого человека на этом фото */
   rejectFace(mediaId: string, index: number): void;
+  /** исправить: это лицо — вот этот человек (он отмечается на фото, с других лиц снимается) */
+  assignFace(mediaId: string, index: number, personId: string): void;
+  /** исправить: это лицо — не тот, кого узнали (больше его на это лицо не ставить) */
+  unassignFace(mediaId: string, index: number): void;
 
   // истории
   saveStory(story: Story): void;
@@ -355,6 +359,42 @@ export const useArchive = create<ArchiveState>((set, get) => ({
       },
       { history: [{ action: 'update', entity: 'media', id: mediaId, summary: 'Узнан человек на фото' }] },
     );
+  },
+
+  assignFace(mediaId, index, personId) {
+    const m = get().data?.media.find(x => x.id === mediaId);
+    if (!m?.faces?.[index]) return;
+    get().apply(
+      d => {
+        d.media = d.media.map(x => {
+          if (x.id !== mediaId) return x;
+          const faces = (x.faces ?? []).map((f, i) => {
+            if (i === index) return { ...f, p: personId, s: undefined, n: f.n?.filter(id => id !== personId) };
+            // один человек — одно лицо на фото
+            return f.p === personId || f.s === personId ? { ...f, p: f.p === personId ? undefined : f.p, s: f.s === personId ? undefined : f.s } : f;
+          });
+          return {
+            ...x,
+            faces,
+            people: x.people.includes(personId) ? x.people : [...x.people, personId],
+            notPeople: x.notPeople?.filter(id => id !== personId),
+          };
+        });
+      },
+      { history: [{ action: 'update', entity: 'media', id: mediaId, summary: 'Исправлено: кто на фото' }] },
+    );
+  },
+
+  unassignFace(mediaId, index) {
+    const m = get().data?.media.find(x => x.id === mediaId);
+    const f0 = m?.faces?.[index];
+    const wrong = f0?.p ?? f0?.s;
+    if (!m || !f0 || !wrong) return;
+    get().apply(d => {
+      d.media = d.media.map(x =>
+        x.id !== mediaId ? x : { ...x, faces: (x.faces ?? []).map((f, i) => (i === index ? { ...f, p: undefined, s: undefined, n: [...new Set([...(f.n ?? []), wrong])] } : f)) },
+      );
+    });
   },
 
   rejectFace(mediaId, index) {

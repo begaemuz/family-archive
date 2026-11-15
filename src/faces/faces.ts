@@ -23,6 +23,8 @@ export interface FaceMatch {
   /** предложение «Кажется, это …?» */
   suggestId: string | null;
   distance: number;
+  /** кем это лицо точно не является (ваши исправления) */
+  not?: string[];
 }
 
 /** порог похожести: меньше — строже. 0.5 — мало ложных совпадений на семейных фото */
@@ -172,6 +174,7 @@ export function savedMatches(data: ArchiveData, m: MediaItem): FaceMatch[] {
     knownId: f.p && on.has(f.p) ? f.p : null,
     suggestId: f.s && !on.has(f.s) && !rejected.has(f.s) ? f.s : null,
     distance: 0,
+    not: f.n,
   }));
 }
 
@@ -185,6 +188,7 @@ export function toMediaFaces(matches: FaceMatch[]): MediaFace[] {
     d: encodeDescriptor(m.face.descriptor),
     ...(m.knownId ? { p: m.knownId } : null),
     ...(m.suggestId ? { s: m.suggestId } : null),
+    ...(m.not?.length ? { n: m.not } : null),
   }));
 }
 
@@ -271,7 +275,7 @@ export async function matchFaces(data: ArchiveData, item: MediaItem, onProgress?
 
   const onPhoto = peopleOnPhoto(data, item);
   const rejected = new Set(item.notPeople ?? []);
-  const res: FaceMatch[] = faces.map(face => ({ face, knownId: null, suggestId: null, distance: 1 }));
+  const res: FaceMatch[] = faces.map((face, i) => ({ face, knownId: null, suggestId: null, distance: 1, not: item.faces?.[i]?.n }));
   const usedPeople = new Set<string>();
 
   // кого уже подтвердили на этом фото — остаются на своих лицах
@@ -287,6 +291,7 @@ export async function matchFaces(data: ArchiveData, item: MediaItem, onProgress?
   const pairs: { fi: number; pid: string; d: number }[] = [];
   faces.forEach((f, fi) =>
     known.forEach((ds, pid) => {
+      if (item.faces?.[fi]?.n?.includes(pid)) return; // вы сказали «это не он»
       const d = Math.min(...ds.map(x => dist(x, f.descriptor)));
       if (d < THRESHOLD) pairs.push({ fi, pid, d });
     }),
