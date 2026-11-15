@@ -1,6 +1,6 @@
 import { normalizeMedia } from '../src/domain/normalize';
 /* Отметки людей на фото: совместное фото видно у всех отмеченных. */
-import { personMedia } from '../src/domain/mediaPeople';
+import { groupByYear, personMedia } from '../src/domain/mediaPeople';
 import { createMeta, createPerson, newId, normalizeArchive, ownerUser } from '../src/domain/normalize';
 import type { ArchiveData, MediaItem } from '../src/domain/types';
 import { useArchive } from '../src/store/archiveStore';
@@ -119,5 +119,15 @@ describe('исправление неверного узнавания', () => {
     useArchive.getState().assignFace(photo.id, 1, son.id);
     expect(st().faces![0].p).toBeUndefined();
     expect(st().faces![1].p).toBe(son.id);
+  });
+});
+
+describe('фото по годам', () => {
+  it('группы идут по годам, внутри — по времени добавления, без года — в конце', () => {
+    const mk = (year: number | null, createdAt: number) => ({ item: { id: String(createdAt), year, createdAt } as MediaItem });
+    const g = groupByYear([mk(null, 1), mk(1990, 5), mk(1985, 3), mk(1990, 2), mk(null, 4)]);
+    expect(g.map(x => x.year)).toEqual([1985, 1990, null]);
+    expect(g[1].items.map(x => x.item.createdAt)).toEqual([2, 5]);
+    expect(g[2].items).toHaveLength(2);
   });
 });

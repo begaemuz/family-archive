@@ -25,3 +25,21 @@ export function personMedia(p: Person, media: MediaItem[], persons: Person[]): P
     .map(item => ({ item, own: false, ownerId: mediaOwnerId(persons, item.id) }));
   return [...own, ...tagged];
 }
+
+export interface YearGroup<T> {
+  /** год снимка; null — год не указан */
+  year: number | null;
+  items: T[];
+}
+
+/** Как телефонная книга: группы по годам по порядку, внутри — в порядке добавления; без года — в конце. */
+export function groupByYear<T extends { item: MediaItem }>(entries: T[]): YearGroup<T>[] {
+  const by = new Map<number | null, T[]>();
+  entries.forEach(e => {
+    const y = e.item.year ?? null;
+    by.set(y, [...(by.get(y) ?? []), e]);
+  });
+  return [...by.entries()]
+    .sort(([a], [b]) => (a === null ? 1 : b === null ? -1 : a - b))
+    .map(([year, items]) => ({ year, items: items.slice().sort((a, b) => a.item.createdAt - b.item.createdAt) }));
+}
