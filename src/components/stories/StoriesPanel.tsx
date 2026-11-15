@@ -1,7 +1,8 @@
+import { useAccess } from '../../hooks/useAccess';
 import { useEffect, useMemo, useState } from 'react';
 import { newId } from '../../domain/normalize';
 import { fullName } from '../../domain/people';
-import type { MediaItem, Story } from '../../domain/types';
+import type { MediaItem, Person, Story } from '../../domain/types';
 import { prepareFiles } from '../../flows/mediaFlows';
 import { viewPersonFlow } from '../../flows/personFlows';
 import { pickFiles } from '../../hooks/useFilePicker';
@@ -9,8 +10,10 @@ import { useMediaUrl } from '../../hooks/useMediaUrl';
 import { useArchive } from '../../store/archiveStore';
 import { useUi } from '../../store/uiStore';
 import { Icon } from '../../ui/Icon';
+import { PeopleAvatars, PersonAvatar } from './PeopleAvatars';
 
 const NO_STORIES: Story[] = [];
+const NO_PERSONS: Person[] = [];
 
 /** Семейные истории: воспоминания, события, рассказы — с отмеченными людьми и файлами. */
 export function StoriesPanel() {
@@ -27,7 +30,19 @@ export function StoriesPanel() {
     setViewId(storyId);
     useUi.setState({ storyId: null });
   }, [storyId]);
+  // «Новая история с …» из карточки человека — сразу редактор с отмеченным человеком
+  const storyNewFor = useUi(s => s.storyNewFor);
+  useEffect(() => {
+    if (!storyNewFor) return;
+    const now = Date.now();
+    setViewId(null);
+    setEditing({ id: newId(), title: '', text: '', date: '', personIds: [storyNewFor], mediaIds: [], createdAt: now, updatedAt: now });
+    useUi.setState({ storyNewFor: null });
+  }, [storyNewFor]);
   const sorted = useMemo(() => stories.slice().sort((a, b) => b.updatedAt - a.updatedAt), [stories]);
+  const acc = useAccess();
+  const persons = useArchive(s => s.data?.persons ?? NO_PERSONS);
+  const byId = useMemo(() => new Map(persons.map(x => [x.id, x])), [persons]);
 
   return (
     <aside className={'side-panel stories-panel' + (open ? ' open' : '') + (editing ? ' form-mode' : '')} aria-label="Семейные истории">
@@ -47,16 +62,18 @@ export function StoriesPanel() {
           <div className="sp-body">
             {sorted.map(s => (
               <button key={s.id} className="story-item" onClick={() => setViewId(s.id)}>
-                <b>{s.title || 'Без названия'}</b>
-                <small>
-                  {[s.date, s.personIds.length ? `людей: ${s.personIds.length}` : '', s.mediaIds.length ? `файлов: ${s.mediaIds.length}` : ''].filter(Boolean).join(' · ') || 'История'}
-                </small>
+                <span className="story-item-head">
+                  <b>{s.title || 'Без названия'}</b>
+                  <PeopleAvatars people={s.personIds.map(id => byId.get(id)).filter((x): x is Person => !!x)} size={26} />
+                </span>
+                <small>{[s.date, s.mediaIds.length ? `файлов: ${s.mediaIds.length}` : ''].filter(Boolean).join(' · ') || 'История'}</small>
                 <span>{s.text.slice(0, 140)}</span>
               </button>
             ))}
             {!stories.length && <div className="sp-empty">Историй пока нет. Запишите первую — например, как познакомились бабушка с дедушкой.</div>}
           </div>
           <div className="sp-footer">
+            {acc.canAddStory() && (
             <button
               className="primary"
               onClick={() => {
@@ -66,6 +83,7 @@ export function StoriesPanel() {
             >
               <Icon name="plus" /> Новая история
             </button>
+            )}
           </div>
         </>
       )}
@@ -95,6 +113,7 @@ function MediaThumb({ m, onClick }: { m: MediaItem; onClick(): void }) {
 }
 
 function StoryView({ story: s, onBack, onEdit }: { story: Story; onBack(): void; onEdit(): void }) {
+  const acc = useAccess();
   const persons = useArchive(st => st.data!.persons);
   const media = useArchive(st => st.data!.media);
   const items = s.mediaIds.map(id => media.find(m => m.id === id)).filter((m): m is MediaItem => !!m);
@@ -106,9 +125,12 @@ function StoryView({ story: s, onBack, onEdit }: { story: Story; onBack(): void;
           <p>{s.date || 'Семейная история'}</p>
         </div>
         <div className="sp-actions static">
+          {acc.canEditStory(s) && (
           <button className="ghost" title="Редактировать" onClick={onEdit}>
             <Icon name="edit" />
           </button>
+          )}
+          {acc.canDeleteStory(s) && (
           <button
             className="ghost danger"
             title="Удалить историю"
@@ -126,6 +148,7 @@ function StoryView({ story: s, onBack, onEdit }: { story: Story; onBack(): void;
           >
             <Icon name="trash" />
           </button>
+          )}
           <button className="ghost" title="Назад к списку" onClick={onBack}>
             <Icon name="chevron-left" />
           </button>
@@ -137,7 +160,8 @@ function StoryView({ story: s, onBack, onEdit }: { story: Story; onBack(): void;
             {s.personIds.map(id => {
               const p = persons.find(x => x.id === id);
               return p ? (
-                <button key={id} className="chip" onClick={() => viewPersonFlow(id)}>
+                <button key={id} className="chip with-ava" onClick={() => viewPersonFlow(id)}>
+                  <PersonAvatar person={p} size={24} />
                   {fullName(p)}
                 </button>
               ) : null;
@@ -232,7 +256,8 @@ function StoryEditor({ story, onDone }: { story: Story; onDone(id: string | null
             {s.personIds.map(id => {
               const p = persons.find(x => x.id === id);
               return p ? (
-                <button key={id} className="chip removable" title="Убрать" onClick={() => setS({ ...s, personIds: s.personIds.filter(x => x !== id) })}>
+                <button key={id} className="chip removable with-ava" title="Убрать" onClick={() => setS({ ...s, personIds: s.personIds.filter(x => x !== id) })}>
+                  <PersonAvatar person={p} size={22} />
                   {fullName(p)} <Icon name="x" size={12} />
                 </button>
               ) : null;

@@ -2,7 +2,7 @@
    Старые числовые id заменяются постоянными UUID; порядок создания (seq) = старый id, чтобы
    раскладка дерева совпала с прежней. */
 import { unzipSync } from 'fflate';
-import { createMeta, newId, normBio, normBurial } from '../domain/normalize';
+import { createMeta, newId, normBio, normBurial, ownerUser } from '../domain/normalize';
 import { normDate } from '../domain/people';
 import type { ArchiveData, MediaItem, Person, RelType, Relation } from '../domain/types';
 import { sha256Hex, sniff } from './media';
@@ -75,7 +75,7 @@ export async function legacyToArchive(
     const id = newId();
     const blob = new Blob([bytes as BlobPart], { type: info.mime });
     blobs.set(id, blob);
-    media.push({ id, kind: 'photo', mime: info.mime, name: `photo.${info.ext}`, size: bytes.length, sha256: await sha256Hex(bytes), createdAt: Date.now(), people: [] });
+    media.push({ id, kind: 'photo', mime: info.mime, name: `photo.${info.ext}`, size: bytes.length, sha256: await sha256Hex(bytes), createdAt: Date.now(), people: [], date: '' });
     return id;
   }
 
@@ -146,7 +146,7 @@ export async function legacyToArchive(
 
   const meta = createMeta(title);
   meta.nextSeq = Math.max(1, ...persons.map(p => p.seq + 1));
-  return { data: { meta, persons, relations, media, stories: [], history: [] }, blobs, missingPhotos };
+  return { data: { meta, persons, relations, media, stories: [], history: [], access: { users: [ownerUser()] }, deleted: [] }, blobs, missingPhotos };
 }
 
 /** Старый ZIP-архив (data.json + img/). */

@@ -1,3 +1,4 @@
+import { useAccess } from '../../hooks/useAccess';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { mediaOwnerId } from '../../domain/mediaPeople';
 import { fullName } from '../../domain/people';
@@ -8,10 +9,40 @@ import { useArchive } from '../../store/archiveStore';
 import { useUi } from '../../store/uiStore';
 import { Icon } from '../../ui/Icon';
 
+/** «Когда:» — примерная дата снимка свободным текстом; сохраняется при уходе с поля или Enter. */
+function MediaDate({ item, readOnly }: { item: MediaItem; readOnly: boolean }) {
+  const [v, setV] = useState(item.date);
+  useEffect(() => setV(item.date), [item.id, item.date]);
+  // значение берём прямо из поля — не зависим от того, успел ли React применить последний ввод
+  const save = (value: string) => useArchive.getState().setMediaDate(item.id, value);
+  return (
+    <label className="lb-date" title="Когда снято — можно примерно: «лето 1985», «1950-е»">
+      <Icon name="calendar" size={15} />
+      <input
+        value={v}
+        readOnly={readOnly}
+        maxLength={60}
+        placeholder={readOnly ? 'Дата не указана' : 'Когда? Например: лето 1985'}
+        onChange={e => setV(e.target.value)}
+        onBlur={e => save(e.currentTarget.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+          if (e.key === 'Escape') {
+            e.stopPropagation();
+            setV(item.date);
+            (e.target as HTMLInputElement).blur();
+          }
+        }}
+      />
+    </label>
+  );
+}
+
 /** «На фото:» — владелец альбома и отмеченные люди; можно отметить ещё кого-то.
     Отмеченным фото/видео показывается у них во вкладке «Медиа». */
 function PhotoPeople({ item, onOpenPerson }: { item: MediaItem; onOpenPerson(id: string): void }) {
   const persons = useArchive(s => s.data!.persons);
+  const acc = useAccess();
   const [adding, setAdding] = useState(false);
   const [q, setQ] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -36,9 +67,13 @@ function PhotoPeople({ item, onOpenPerson }: { item: MediaItem; onOpenPerson(id:
   }, [adding]);
 
   const setPeople = (ids: string[]) => useArchive.getState().setMediaPeople(item.id, ids);
+  // менять дату и отметки можно, если владелец фото — в вашей ветке
+  const editable = acc.canEditMediaItem(item, ownerId);
 
   return (
     <div className="lb-people" onClick={e => e.stopPropagation()}>
+      <MediaDate item={item} readOnly={!editable} />
+      <span className="lb-sep" />
       <span className="lb-people-title">
         <Icon name="users" size={15} /> На фото:
       </span>
@@ -52,12 +87,14 @@ function PhotoPeople({ item, onOpenPerson }: { item: MediaItem; onOpenPerson(id:
           <button className="lb-chip-name" title="Открыть карточку" onClick={() => onOpenPerson(p.id)}>
             {fullName(p)}
           </button>
-          <button className="lb-chip-x" title="Убрать отметку" onClick={() => setPeople(item.people.filter(x => x !== p.id))}>
-            <Icon name="x" size={13} />
-          </button>
+          {editable && (
+            <button className="lb-chip-x" title="Убрать отметку" onClick={() => setPeople(item.people.filter(x => x !== p.id))}>
+              <Icon name="x" size={13} />
+            </button>
+          )}
         </span>
       ))}
-      {!adding ? (
+      {!editable ? null : !adding ? (
         <button className="lb-chip add" onClick={() => setAdding(true)}>
           <Icon name="plus" size={14} /> Отметить
         </button>
@@ -108,6 +145,8 @@ export function Lightbox() {
   const lb = useUi(s => s.lightbox);
   const setLb = useUi(s => s.setLightbox);
   const media = useArchive(s => s.data?.media);
+  const persons = useArchive(s => s.data?.persons);
+  const acc = useAccess();
   const id = lb ? lb.ids[lb.index] : null;
   const item = media?.find(m => m.id === id);
   const url = useMediaUrl(id);
@@ -130,6 +169,9 @@ export function Lightbox() {
   });
 
   if (!lb || !item) return null;
+  // удалить своё фото — право «удалять»; снять отметку с себя на чужом — право «менять» этого человека
+  const viewerOwns = !!lb.ownerId && !!persons?.find(p => p.id === lb.ownerId)?.media.includes(item.id);
+  const canDeleteHere = !!lb.ownerId && (viewerOwns ? acc.canDeleteMedia(lb.ownerId) : acc.canEditPerson(lb.ownerId));
 
   return (
     <div className="lightbox open" onClick={e => e.target === e.currentTarget && setLb(null)}>
@@ -155,7 +197,7 @@ export function Lightbox() {
       <button className="lb-close" title="Закрыть" onClick={() => setLb(null)}>
         <Icon name="x" />
       </button>
-      {lb.ownerId && (
+      {lb.ownerId && canDeleteHere && (
         <button
           className="lb-delete"
           title="Удалить"

@@ -1,4 +1,5 @@
 import { formatSize, isPreviewable } from '../../archive/media';
+import { useAccess } from '../../hooks/useAccess';
 import type { MediaItem, Person } from '../../domain/types';
 import { prepareFiles } from '../../flows/mediaFlows';
 import { askDeleteMedia } from '../../flows/personFlows';
@@ -39,11 +40,14 @@ export function DocumentsTab({ person: p }: { person: Person }) {
     useUi.getState().showToast(`Добавлено документов: ${ready.length}`);
   };
 
+  const acc = useAccess();
   return (
     <div className="sp-body">
-      <button className="bio-add doc-add" onClick={add}>
-        <Icon name="plus" /> Добавить документ
-      </button>
+      {acc.canAddMedia(p.id) && (
+        <button className="bio-add doc-add" onClick={add}>
+          <Icon name="plus" /> Добавить документ
+        </button>
+      )}
       <div className="doc-list">
         {docs.slice().reverse().map(m => (
           <div className="doc-item" key={m.id}>
@@ -59,9 +63,11 @@ export function DocumentsTab({ person: p }: { person: Person }) {
             <button className="ghost" title="Скачать" onClick={() => downloadBlob(mediaRegistry.get(m.id)!, m.name)}>
               <Icon name="download" />
             </button>
-            <button className="ghost danger" title="Удалить" onClick={() => askDeleteMedia(m.id, p.id)}>
-              <Icon name="trash" />
-            </button>
+            {acc.canDeleteMedia(p.id) && (
+              <button className="ghost danger" title="Удалить" onClick={() => askDeleteMedia(m.id, p.id)}>
+                <Icon name="trash" />
+              </button>
+            )}
           </div>
         ))}
       </div>

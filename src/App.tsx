@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { DropZone } from './components/app/DropZone';
+import { MergeDialog } from './components/app/MergeDialog';
 import { markArchiveOpen, StartScreen } from './components/app/StartScreen';
 import { TopBar } from './components/app/TopBar';
 import { TreeCanvas } from './components/canvas/TreeCanvas';
@@ -52,6 +53,7 @@ export function App() {
         <StartScreen />
       )}
       <DropZone />
+      <MergeDialog />
       <Lightbox />
       <RelationTypeDialog />
       <CropDialog />

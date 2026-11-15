@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useAccess } from '../../hooks/useAccess';
 import { relationGroups } from '../../domain/kinship';
 import { personMedia } from '../../domain/mediaPeople';
 import { ageText, fullName, genderClass, initials, yearLine } from '../../domain/people';
@@ -9,6 +10,7 @@ import { useArchive } from '../../store/archiveStore';
 import { useUi, type PanelTab } from '../../store/uiStore';
 import { Icon } from '../../ui/Icon';
 import { BioTab } from './BioTab';
+import { StoriesTab } from './StoriesTab';
 import { DocumentsTab } from './DocumentsTab';
 import { InfoTab } from './InfoTab';
 import { MediaTab } from './MediaTab';
@@ -21,6 +23,7 @@ export function Avatar({ person, cls = 'avatar' }: { person: Person; cls?: strin
 
 export function PersonView({ person: p }: { person: Person }) {
   const tab = useUi(s => s.panel.tab);
+  const acc = useAccess();
   const setTab = useUi(s => s.setTab);
   const closePanel = useUi(s => s.closePanel);
   const persons = useArchive(s => s.data!.persons);
@@ -55,19 +58,29 @@ export function PersonView({ person: p }: { person: Person }) {
     ['media', 'Медиа', mediaCount || null],
     ['documents', 'Документы', p.documents.length || null],
     ['relations', 'Связи', relCount || null],
-    ['bio', 'Биография', p.bio.length + storyCount || null],
+    ['bio', 'Биография', p.bio.length || null],
+    ['stories', 'Истории', storyCount || null],
   ];
 
   return (
     <>
       <div className="sp-head">
         <div className="sp-actions">
-          <button className="ghost" title="Редактировать" onClick={() => editPersonFlow(p.id)}>
-            <Icon name="edit" />
-          </button>
-          <button className="ghost danger" title="Удалить человека" onClick={() => askDeletePerson(p.id)}>
-            <Icon name="trash" />
-          </button>
+          {acc.canEditPerson(p.id) && (
+            <button className="ghost" title="Редактировать" onClick={() => editPersonFlow(p.id)}>
+              <Icon name="edit" />
+            </button>
+          )}
+          {acc.canDeletePerson(p.id) && (
+            <button className="ghost danger" title="Удалить человека" onClick={() => askDeletePerson(p.id)}>
+              <Icon name="trash" />
+            </button>
+          )}
+          {!acc.canEditPerson(p.id) && (
+            <span className="ro-badge" title="Этот человек не из вашей ветки — только просмотр">
+              <Icon name="eye" size={14} /> просмотр
+            </span>
+          )}
           <button className="ghost" title="Закрыть" onClick={closePanel}>
             <Icon name="x" />
           </button>
@@ -104,6 +117,7 @@ export function PersonView({ person: p }: { person: Person }) {
       {tab === 'documents' && <DocumentsTab person={p} />}
       {tab === 'relations' && <RelationsTab person={p} groups={groups} />}
       {tab === 'bio' && <BioTab person={p} />}
+      {tab === 'stories' && <StoriesTab person={p} />}
     </>
   );
 }

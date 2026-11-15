@@ -1,3 +1,4 @@
+import { useAccess } from '../../hooks/useAccess';
 import { useMemo } from 'react';
 import { formatSize } from '../../archive/media';
 import { fullName } from '../../domain/people';
@@ -34,12 +35,12 @@ function DeleteButton({ onDelete, title = 'Удалить' }: { onDelete(): void
   );
 }
 
-function Tile({ entry, ownerName, onOpen, onDelete }: { entry: PersonMedia; ownerName: string; onOpen(): void; onDelete(): void }) {
+function Tile({ entry, ownerName, onOpen, onDelete }: { entry: PersonMedia; ownerName: string; onOpen(): void; onDelete: (() => void) | null }) {
   const { item, own } = entry;
   const url = useMediaUrl(item.id);
   const tagCount = item.people.length;
   return (
-    <div className={'album-item kind-' + item.kind + (own ? '' : ' tagged')} onClick={onOpen} title={own ? item.name : `Отмечен(а) на фото из альбома: ${ownerName}`}>
+    <div className={'album-item kind-' + item.kind + (own ? '' : ' tagged')} onClick={onOpen} title={(item.date ? item.date + ' · ' : '') + (own ? item.name : `Отмечен(а) на фото из альбома: ${ownerName}`)}>
       {item.kind === 'photo' && url && <img src={url} alt="" loading="lazy" draggable={false} />}
       {item.kind === 'video' && url && <video src={url} preload="metadata" muted playsInline />}
       {item.kind === 'video' && (
@@ -47,6 +48,7 @@ function Tile({ entry, ownerName, onOpen, onDelete }: { entry: PersonMedia; owne
           <Icon name="play" size={18} />
         </span>
       )}
+      {item.date && <span className="date-badge">{item.date}</span>}
       {/* чужое фото, где человек отмечен, — или своё, на котором отмечены другие */}
       {!own ? (
         <span className="tag-badge" title={`Из альбома: ${ownerName}`}>
@@ -57,13 +59,13 @@ function Tile({ entry, ownerName, onOpen, onDelete }: { entry: PersonMedia; owne
           <Icon name="users" size={13} /> {tagCount}
         </span>
       ) : null}
-      <DeleteButton onDelete={onDelete} title={own ? 'Удалить' : 'Убрать отметку'} />
+      {onDelete && <DeleteButton onDelete={onDelete} title={own ? 'Удалить' : 'Убрать отметку'} />}
     </div>
   );
 }
 
 /** Аудиозапись — строкой со встроенным плеером: слушать можно прямо в карточке. */
-function AudioRow({ item, onDelete }: { item: MediaItem; onDelete(): void }) {
+function AudioRow({ item, onDelete }: { item: MediaItem; onDelete: (() => void) | null }) {
   const url = useMediaUrl(item.id);
   return (
     <div className="audio-row">
@@ -75,9 +77,11 @@ function AudioRow({ item, onDelete }: { item: MediaItem; onDelete(): void }) {
           <b title={item.name}>{item.name}</b>
           <small>{formatSize(item.size)}</small>
         </div>
-        <button className="ghost danger icon-button" title="Удалить" onClick={onDelete}>
-          <Icon name="trash" />
-        </button>
+        {onDelete && (
+          <button className="ghost danger icon-button" title="Удалить" onClick={onDelete}>
+            <Icon name="trash" />
+          </button>
+        )}
       </div>
       {url && <audio src={url} controls preload="none" />}
     </div>
@@ -98,6 +102,10 @@ export function MediaTab({ person: p }: { person: Person }) {
     const o = id ? persons.find(x => x.id === id) : null;
     return o ? fullName(o) : '';
   };
+  const acc = useAccess();
+  const canAdd = acc.canAddMedia(p.id);
+  const canDelete = acc.canDeleteMedia(p.id);
+  const canUntag = acc.canEditPerson(p.id);
   const openLightbox = useUi(s => s.openLightbox);
 
   const add = async (kind: Kind, accept: string) => {
@@ -124,26 +132,30 @@ export function MediaTab({ person: p }: { person: Person }) {
             </div>
             {sec.kind === 'audio' ? (
               <div className="audio-list">
-                <button className="audio-add" onClick={() => add(sec.kind, sec.accept)}>
-                  <Icon name="plus" /> {sec.add}
-                </button>
-                {list.map(({ item: m }) => (
-                  <AudioRow key={m.id} item={m} onDelete={() => askDeleteMedia(m.id, p.id)} />
+                {canAdd && (
+                  <button className="audio-add" onClick={() => add(sec.kind, sec.accept)}>
+                    <Icon name="plus" /> {sec.add}
+                  </button>
+                )}
+                {list.map(({ item: m, own }) => (
+                  <AudioRow key={m.id} item={m} onDelete={(own ? canDelete : canUntag) ? () => askDeleteMedia(m.id, p.id) : null} />
                 ))}
               </div>
             ) : (
               <div className={'album' + (sec.kind === 'video' ? ' album-video' : '')}>
-                <button className="album-add" onClick={() => add(sec.kind, sec.accept)}>
-                  <Icon name="plus" />
-                  {sec.add}
-                </button>
+                {canAdd && (
+                  <button className="album-add" onClick={() => add(sec.kind, sec.accept)}>
+                    <Icon name="plus" />
+                    {sec.add}
+                  </button>
+                )}
                 {list.map((e, i) => (
                   <Tile
                     key={e.item.id}
                     entry={e}
                     ownerName={nameOf(e.ownerId)}
                     onOpen={() => openLightbox({ ids: list.map(x => x.item.id), index: i, ownerId: p.id })}
-                    onDelete={() => askDeleteMedia(e.item.id, p.id)}
+                    onDelete={(e.own ? canDelete : canUntag) ? () => askDeleteMedia(e.item.id, p.id) : null}
                   />
                 ))}
               </div>

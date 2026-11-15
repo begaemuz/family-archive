@@ -1,6 +1,6 @@
 /* Отметки людей на фото: совместное фото видно у всех отмеченных. */
 import { personMedia } from '../src/domain/mediaPeople';
-import { createMeta, createPerson, newId, normalizeArchive } from '../src/domain/normalize';
+import { createMeta, createPerson, newId, normalizeArchive, ownerUser } from '../src/domain/normalize';
 import type { ArchiveData, MediaItem } from '../src/domain/types';
 import { useArchive } from '../src/store/archiveStore';
 
@@ -8,9 +8,9 @@ function sample() {
   const husband = { ...createPerson(1, 0, 0), firstName: 'Андрей' };
   const wife = { ...createPerson(2, 300, 0), firstName: 'Альбина' };
   const son = { ...createPerson(3, 150, 300), firstName: 'Сергей' };
-  const photo: MediaItem = { id: newId(), kind: 'photo', mime: 'image/jpeg', name: 'свадьба.jpg', size: 10, sha256: '', createdAt: 1, people: [wife.id] };
+  const photo: MediaItem = { id: newId(), kind: 'photo', mime: 'image/jpeg', name: 'свадьба.jpg', size: 10, sha256: '', createdAt: 1, people: [wife.id], date: '' };
   husband.media = [photo.id];
-  const data: ArchiveData = { meta: createMeta('Тест', ''), persons: [husband, wife, son], relations: [], media: [photo], stories: [], history: [] };
+  const data: ArchiveData = { meta: createMeta('Тест', ''), persons: [husband, wife, son], relations: [], media: [photo], stories: [], history: [], access: { users: [ownerUser()] }, deleted: [] };
   return { data, husband, wife, son, photo };
 }
 

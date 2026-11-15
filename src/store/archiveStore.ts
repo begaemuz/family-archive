@@ -3,9 +3,9 @@
 import { create } from 'zustand';
 import { autoLayout as runAutoLayout, layoutRows, type RowsLayout } from '../domain/layout';
 import { computeHidden, descGraph, descendantsOf, isAncestor } from '../domain/graph';
-import { createMeta, createPerson, newId } from '../domain/normalize';
+import { createMeta, createPerson, newId, ownerUser } from '../domain/normalize';
 import { fullName } from '../domain/people';
-import type { ArchiveData, HistoryEntry, MediaItem, Person, RelType, Story } from '../domain/types';
+import type { ArchiveData, HistoryEntry, MediaItem, Person, RelType, Story, Tombstone } from '../domain/types';
 import { mediaRegistry } from './mediaRegistry';
 
 export type SaveStatus = 'saved' | 'dirty' | 'saving' | 'error';
@@ -26,6 +26,9 @@ interface ArchiveState {
   status: SaveStatus;
   /** счётчик изменений — для автосохранения черновика */
   revision: number;
+  /** кто сейчас правит (id пользователя архива) — ставится в отметки «изменил» */
+  actor: string;
+  setActor(id: string): void;
 
   open(data: ArchiveData, blobs?: Map<string, Blob>): void;
   close(): void;
@@ -49,6 +52,8 @@ interface ArchiveState {
   deleteMedia(id: string): void;
   /** отметить людей на фото/видео (владелец файла в список не входит) */
   setMediaPeople(mediaId: string, people: string[]): void;
+  /** когда снято — свободный текст */
+  setMediaDate(mediaId: string, date: string): void;
 
   // истории
   saveStory(story: Story): void;
@@ -67,13 +72,43 @@ function cloneDraft(d: ArchiveData): Draft {
     media: d.media.slice(),
     stories: d.stories.slice(),
     history: d.history.slice(),
+    access: { users: d.access.users.map(u => ({ ...u, can: { ...u.can } })) },
+    deleted: d.deleted.slice(),
   };
 }
 
 const MAX_HISTORY = 5000;
 
+/* ---------- отметки «кто и когда» (для слияния копий) ---------- */
+// поля раскладки на холсте — это вид, а не данные: их изменение правкой не считается
+const LAYOUT_KEYS = new Set(['x', 'y', 'slot', 'offX', 'offK', 'collapsed']);
+const STAMP_KEYS = new Set(['updatedAt', 'updatedBy', 'createdBy', 'createdAt']);
+/** Содержимое записи без раскладки и отметок — сравнивается, чтобы понять, была ли правка. */
+export function contentKey(e: object): string {
+  return JSON.stringify(e, (k, v) => (k && (LAYOUT_KEYS.has(k) || STAMP_KEYS.has(k)) ? undefined : v));
+}
+
+type Stampable = { id: string; createdBy?: string; updatedBy?: string; updatedAt?: number; createdAt?: number };
+
+/** Новые записи — «создал», изменённые — «изменил», исчезнувшие — метка удаления. */
+function stamp<T extends Stampable>(prev: T[], next: T[], entity: Tombstone['entity'], actor: string, now: number, deleted: Tombstone[]): T[] {
+  const before = new Map(prev.map(e => [e.id, e]));
+  const out = next.map(e => {
+    const p = before.get(e.id);
+    if (!p) return { ...e, createdBy: e.createdBy ?? actor, createdAt: e.createdAt ?? now, updatedAt: now, updatedBy: actor };
+    if (p === e) return e; // тот же объект — точно без изменений
+    return contentKey(p) === contentKey(e) ? e : { ...e, updatedAt: now, updatedBy: actor };
+  });
+  const ids = new Set(next.map(e => e.id));
+  prev.forEach(e => {
+    if (!ids.has(e.id) && !deleted.some(t => t.entity === entity && t.id === e.id)) deleted.push({ entity, id: e.id, ts: now, by: actor });
+  });
+  return out;
+}
+
 export const useArchive = create<ArchiveState>((set, get) => ({
   data: null,
+  actor: '',
   layout: emptyLayout(),
   status: 'saved',
   revision: 0,
@@ -97,6 +132,13 @@ export const useArchive = create<ArchiveState>((set, get) => ({
     const d = cloneDraft(cur);
     fn(d);
     const now = Date.now();
+    if (!opts.silent) {
+      const actor = get().actor;
+      d.persons = stamp(cur.persons, d.persons, 'person', actor, now, d.deleted);
+      d.relations = stamp(cur.relations, d.relations, 'relation', actor, now, d.deleted);
+      d.media = stamp(cur.media, d.media, 'media', actor, now, d.deleted);
+      d.stories = stamp(cur.stories, d.stories, 'story', actor, now, d.deleted);
+    }
     if (opts.history?.length) {
       d.history.push(...opts.history.map(h => ({ ...h, ts: now })));
       if (d.history.length > MAX_HISTORY) d.history.splice(0, d.history.length - MAX_HISTORY);
@@ -117,6 +159,10 @@ export const useArchive = create<ArchiveState>((set, get) => ({
 
   setStatus(status) {
     set({ status });
+  },
+
+  setActor(actor) {
+    set({ actor });
   },
 
   addPerson(init) {
@@ -251,6 +297,15 @@ export const useArchive = create<ArchiveState>((set, get) => ({
     );
   },
 
+  setMediaDate(mediaId, date) {
+    const v = date.trim().slice(0, 60);
+    const m = get().data?.media.find(x => x.id === mediaId);
+    if (!m || m.date === v) return;
+    get().apply(d => {
+      d.media = d.media.map(x => (x.id === mediaId ? { ...x, date: v } : x));
+    }, { history: [{ action: 'update', entity: 'media', id: mediaId, summary: v ? `Дата фото: ${v}` : 'Дата фото убрана' }] });
+  },
+
   deleteMedia(id) {
     get().apply(
       d => {
@@ -292,7 +347,7 @@ export const useArchive = create<ArchiveState>((set, get) => ({
 
 /** Пустой архив (для «Начать с нуля» до появления шифрования). */
 export function blankArchive(title = 'Семейный архив'): ArchiveData {
-  return { meta: createMeta(title), persons: [], relations: [], media: [], stories: [], history: [] };
+  return { meta: createMeta(title), persons: [], relations: [], media: [], stories: [], history: [], access: { users: [ownerUser()] }, deleted: [] };
 }
 
 export const hiddenOf = (d: ArchiveData) => computeHidden(d.persons, d.relations);

@@ -4,9 +4,17 @@ import type { RelType, Relation } from '../domain/types';
 import { useArchive } from '../store/archiveStore';
 import { useUi } from '../store/uiStore';
 import { worldCenter } from './canvasGeometry';
+import { access } from '../hooks/useAccess';
+import { mediaOwnerId } from '../domain/mediaPeople';
 
 const ui = () => useUi.getState();
 const archive = () => useArchive.getState();
+
+/** Проверка прав в сценарии: кнопки и так скрыты, но действие может прийти горячей клавишей или перетаскиванием. */
+function allowed(ok: boolean, what = 'это действие'): boolean {
+  if (!ok) ui().showToast(`Нет прав на ${what}: можно менять только свою ветку`);
+  return ok;
+}
 
 export async function confirmLeaveForm(): Promise<boolean> {
   const p = ui().panel;
@@ -26,12 +34,14 @@ export async function closeSidePanelsFlow() {
 }
 
 export async function addPersonFlow() {
+  if (!allowed(access().canAddFree(), 'добавление людей')) return;
   if (!(await confirmLeaveForm())) return;
   const c = worldCenter();
   ui().openForm({ personId: null, x: c.x - 100, y: c.y - 60 });
 }
 
 export async function editPersonFlow(id: string) {
+  if (!allowed(access().canEditPerson(id), 'изменение этого человека')) return;
   if (!(await confirmLeaveForm())) return;
   ui().select(id);
   ui().openForm({ personId: id });
@@ -46,6 +56,7 @@ export async function viewPersonFlow(id: string) {
 export async function createRelativeFlow(anchorId: string, drop?: { x: number; y: number }) {
   const anchor = archive().data?.persons.find(p => p.id === anchorId);
   if (!anchor) return;
+  if (!allowed(access().canAddNear(anchorId), 'добавление родственников этому человеку')) return;
   if (!(await confirmLeaveForm())) return;
   ui().openForm({
     personId: null,
@@ -60,6 +71,7 @@ export async function createRelativeFlow(anchorId: string, drop?: { x: number; y
  */
 export function linkPeople(kind: RelType | 'child', a: string, b: string) {
   const [type, from, to] = kind === 'child' ? (['parent', b, a] as const) : ([kind, a, b] as const);
+  if (!allowed(access().canLink(a, b), 'эту связь')) return false;
   const res = archive().addRelation(type, from, to);
   if (res.ok) ui().showToast('Связь создана');
   else ui().showToast(res.reason === 'cycle' ? 'Нельзя: получится цикл — этот человек уже предок родителя' : 'Такая связь уже существует');
@@ -72,6 +84,7 @@ export async function askDeletePerson(id: string) {
   const d = archive().data;
   const p = d?.persons.find(x => x.id === id);
   if (!d || !p) return;
+  if (!allowed(access().canDeletePerson(id), 'удаление этого человека')) return;
   const n = d.relations.filter(r => r.from === id || r.to === id).length;
   const files = (p.mainPhotoId ? 1 : 0) + p.media.length + p.documents.length;
   const ok = await ui().confirm({
@@ -93,6 +106,7 @@ export async function askDeletePerson(id: string) {
 }
 
 export async function askDeleteRelation(viewerId: string, r: Relation) {
+  if (!allowed(access().canUnlink(r), 'удаление этой связи')) return;
   const other = r.from === viewerId ? r.to : r.from;
   const kind = r.type === 'parent' ? (r.from === viewerId ? 'ребёнок' : 'родитель') : r.type === 'spouse' ? 'супруги' : r.type === 'sibling' ? 'брат / сестра' : 'другая связь';
   const ok = await ui().confirm({
@@ -118,6 +132,7 @@ export async function askDeleteMedia(mediaId: string, viewerId?: string | null) 
 
   // человек только отмечен на чужом фото — снимаем отметку, файл остаётся у владельца
   if (viewer && m.people.includes(viewer.id) && !viewer.media.includes(mediaId)) {
+    if (!allowed(access().canEditPerson(viewer.id), 'снятие этой отметки')) return false;
     const ok = await ui().confirm({
       title: 'Убрать отметку?',
       body: (
@@ -135,6 +150,8 @@ export async function askDeleteMedia(mediaId: string, viewerId?: string | null) 
     return true;
   }
 
+  const ownerId = mediaOwnerId(d.persons, mediaId) ?? d.persons.find(p => p.documents.includes(mediaId))?.id ?? null;
+  if (!allowed(ownerId ? access().canDeleteMedia(ownerId) : access().isOwner, 'удаление этого файла')) return false;
   const tagged = m.people.length;
   const ok = await ui().confirm({
     title: `Удалить ${what}?`,

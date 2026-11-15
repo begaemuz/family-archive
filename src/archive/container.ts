@@ -1,15 +1,20 @@
-/* Формат файла .family, версия 1.
+/* Формат файла .family. Версия 2 — ключ данных и ячейки пользователей (см. keys.ts); версия 1 — один пароль.
 
    [ "FAMILYAR" ][ u32 длина заголовка ][ заголовок JSON ]          ← открыт, но защищён: его хеш входит в AAD
    [ nonce 12 ][ u32 длина ][ verifier ]                             ← проверка пароля
    [ nonce 12 ][ u32 длина ][ блок 1 ] … [ nonce ][ длина ][ блок N ] ← содержимое (ZIP), по 4 МиБ
 
    Каждый блок шифруется AES-256-GCM со своим случайным nonce и AAD = SHA-256(заголовок) ‖ номер ‖ «последний».
-   Поэтому подмена, перестановка, обрезка или добавление блоков обнаруживаются. Пароль нигде не хранится. */
-import { checkKdf, decrypt, deriveKey, encrypt, newKdf, sha256, type KdfParams } from './crypto';
+   Поэтому подмена, перестановка, обрезка или добавление блоков обнаруживаются. Пароль нигде не хранится.
+   v2: всё шифруется случайным ключом данных; в заголовке — ячейки пользователей с этим ключом,
+   завёрнутым их логином-паролем. v1 (старые файлы): ключ — Argon2id(пароль, соль из заголовка). */
+import { checkKdf, decrypt, deriveKey, encrypt, randomBytes, sha256, type KdfParams } from './crypto';
+import { checkSlots, importDataKey, openSlot, type KeySlot, type SessionKey } from './keys';
+
+export type { SessionKey } from './keys';
 
 export const MAGIC = 'FAMILYAR';
-export const FORMAT_VERSION = 1;
+export const FORMAT_VERSION = 2;
 export const CHUNK_SIZE = 4 * 1024 * 1024;
 const VERIFIER_TEXT = 'family-archive:password-ok';
 const MAX_HEADER = 64 * 1024;
@@ -19,7 +24,10 @@ export interface ContainerHeader {
   version: number;
   archiveId: string;
   cipher: 'AES-256-GCM';
-  kdf: KdfParams;
+  /** v1: соль и параметры Argon2id единственного пароля */
+  kdf?: KdfParams;
+  /** v2: ячейки пользователей с завёрнутым ключом данных */
+  keySlots?: KeySlot[];
   chunkSize: number;
   chunkCount: number;
   createdWith: string;
@@ -33,7 +41,7 @@ export class ArchiveError extends Error {
       {
         'not-archive': 'Этот файл не является семейным архивом',
         'newer-version': 'Архив создан в более новой версии приложения — обновите приложение',
-        'wrong-password': 'Неверный пароль',
+        'wrong-password': 'Неверный логин или пароль',
         corrupted: 'Файл повреждён — его не удаётся прочитать',
       }[code],
     );
@@ -57,17 +65,6 @@ async function chunkAad(headerHash: Uint8Array, index: number, last: boolean): P
   return a;
 }
 
-export interface SessionKey {
-  key: CryptoKey;
-  kdf: KdfParams;
-}
-
-/** Новый ключ: новая соль + Argon2id. */
-export async function createKey(password: string): Promise<SessionKey> {
-  const kdf = newKdf();
-  return { key: await deriveKey(password, kdf), kdf };
-}
-
 /** Зашифровать содержимое (байты ZIP) в контейнер .family. */
 export async function sealContainer(payload: Uint8Array, sk: SessionKey, archiveId: string, appVersion: string): Promise<Blob> {
   const chunkCount = Math.max(1, Math.ceil(payload.length / CHUNK_SIZE));
@@ -76,7 +73,7 @@ export async function sealContainer(payload: Uint8Array, sk: SessionKey, archive
     version: FORMAT_VERSION,
     archiveId,
     cipher: 'AES-256-GCM',
-    kdf: sk.kdf,
+    keySlots: sk.slots,
     chunkSize: CHUNK_SIZE,
     chunkCount,
     createdWith: appVersion,
@@ -113,9 +110,10 @@ export async function readHeader(file: Blob): Promise<{ header: ContainerHeader;
   if (header?.format !== 'family') throw new ArchiveError('not-archive');
   if (typeof header.version !== 'number') throw new ArchiveError('corrupted');
   if (header.version > FORMAT_VERSION) throw new ArchiveError('newer-version');
+  const keysOk = header.version >= 2 ? checkSlots(header.keySlots) : checkKdf(header.kdf);
   if (
     header.cipher !== 'AES-256-GCM' ||
-    !checkKdf(header.kdf) ||
+    !keysOk ||
     !Number.isInteger(header.chunkCount) || header.chunkCount < 1 || header.chunkCount > 1_000_000 ||
     header.chunkSize !== CHUNK_SIZE
   )
@@ -132,11 +130,9 @@ async function readBlock(file: Blob, offset: number): Promise<{ nonce: Uint8Arra
   return { nonce: pre.subarray(0, 12), ct, next: offset + 16 + len };
 }
 
-/** Проверить пароль и получить ключ (без расшифровки содержимого). */
-export async function unlockContainer(file: Blob, password: string): Promise<SessionKey & { header: ContainerHeader }> {
+async function verify(file: Blob, key: CryptoKey): Promise<{ header: ContainerHeader }> {
   const { header, headerBytes, offset } = await readHeader(file);
   const hh = await sha256(headerBytes);
-  const key = await deriveKey(password, header.kdf);
   const v = await readBlock(file, offset);
   try {
     const plain = await decrypt(key, v.nonce, v.ct, await chunkAad(hh, 0xffffffff, false));
@@ -144,7 +140,39 @@ export async function unlockContainer(file: Blob, password: string): Promise<Ses
   } catch {
     throw new ArchiveError('wrong-password');
   }
-  return { key, kdf: header.kdf, header };
+  return { header };
+}
+
+export interface Unlocked {
+  header: ContainerHeader;
+  /** ключ, которым зашифрован этот файл (для openContainer) */
+  fileKey: CryptoKey;
+  /** сессия v2. Для файла v1 ячеек ещё нет: их создаёт сессия после чтения данных (нужен id владельца) */
+  sk: SessionKey;
+  /** файл старого формата: пароль нужен, чтобы сразу завести ячейку владельца */
+  legacy: boolean;
+}
+
+/** Проверить логин-пароль и получить ключи (без расшифровки содержимого).
+    v1: логин не нужен; ключ данных для новой версии формата создаётся случайный. */
+export async function unlockContainer(file: Blob, login: string, password: string): Promise<Unlocked> {
+  const { header } = await readHeader(file);
+  if (header.version >= 2) {
+    const r = await openSlot(header.keySlots!, header.archiveId, login, password);
+    if (!r) throw new ArchiveError('wrong-password');
+    const key = await importDataKey(r.raw);
+    await verify(file, key);
+    return { header, fileKey: key, sk: { key, raw: r.raw, slots: header.keySlots!, userId: r.userId }, legacy: false };
+  }
+  const fileKey = await deriveKey(password, header.kdf!);
+  await verify(file, fileKey);
+  const raw = randomBytes(32);
+  return { header, fileKey, sk: { key: await importDataKey(raw), raw, slots: [], userId: '' }, legacy: true };
+}
+
+/** Открыть копию того же архива уже известным ключом данных (слияние): без пароля. */
+export async function unlockWithKey(file: Blob, key: CryptoKey): Promise<ContainerHeader> {
+  return (await verify(file, key)).header;
 }
 
 /** Расшифровать содержимое контейнера (ключ уже проверен unlockContainer). */

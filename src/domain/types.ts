@@ -85,6 +85,9 @@ export interface Person {
 
   createdAt: number;
   updatedAt: number;
+  /** кто создал / последним изменил (id пользователя архива) — для слияния копий */
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 export interface Relation {
@@ -92,6 +95,8 @@ export interface Relation {
   from: string;
   to: string;
   type: RelType;
+  createdAt?: number;
+  createdBy?: string;
 }
 
 export type MediaKind = 'photo' | 'video' | 'audio' | 'document';
@@ -106,6 +111,11 @@ export interface MediaItem {
   createdAt: number;
   /** кто ещё на фото/видео (кроме владельца — того, в чьём альбоме файл); у них файл тоже виден */
   people: string[];
+  /** когда снято — свободный текст: «лето 1985», «1950-е», «12.04.1961» */
+  date: string;
+  updatedAt?: number;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 export interface Story {
@@ -117,6 +127,8 @@ export interface Story {
   mediaIds: string[];
   createdAt: number;
   updatedAt: number;
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 export type HistoryAction = 'create' | 'update' | 'delete';
@@ -142,6 +154,34 @@ export interface ArchiveMeta {
 }
 
 /** Всё содержимое архива (без самих файлов медиа — они лежат отдельно как Blob). */
+/* ---------- доступы ---------- */
+
+export type AccessRight = 'change' | 'add' | 'delete';
+
+/** Пользователь архива. Владелец — все права; участник — читает всё, меняет только свою ветку. */
+export interface AccessUser {
+  id: string;
+  /** логин (в нижнем регистре); у владельца может быть пустым — тогда вход только по паролю */
+  login: string;
+  /** как показывать в интерфейсе: «Альбина» */
+  name: string;
+  role: 'owner' | 'member';
+  /** корень ветки: человек, вся его кровная родня и их супруги; null — весь архив */
+  root: string | null;
+  can: Record<AccessRight, boolean>;
+  createdAt: number;
+  /** с какого момента правки участника ещё не слиты в основной архив */
+  syncedAt: number;
+}
+
+/** Метка удаления — чтобы при слиянии копий удалённое не «воскресало». */
+export interface Tombstone {
+  entity: 'person' | 'relation' | 'media' | 'story';
+  id: string;
+  ts: number;
+  by: string;
+}
+
 export interface ArchiveData {
   meta: ArchiveMeta;
   persons: Person[];
@@ -149,4 +189,6 @@ export interface ArchiveData {
   media: MediaItem[];
   stories: Story[];
   history: HistoryEntry[];
+  access: { users: AccessUser[] };
+  deleted: Tombstone[];
 }

@@ -1,4 +1,5 @@
 import type { KinGroup } from '../../domain/kinship';
+import { useAccess } from '../../hooks/useAccess';
 import { fullName, genderClass, yearLine } from '../../domain/people';
 import type { Person } from '../../domain/types';
 import { askDeleteRelation, viewPersonFlow } from '../../flows/personFlows';
@@ -6,6 +7,7 @@ import { Icon } from '../../ui/Icon';
 import { Avatar } from './PersonView';
 
 export function RelationsTab({ person: p, groups }: { person: Person; groups: KinGroup[] }) {
+  const acc = useAccess();
   return (
     <div className="sp-body">
       {groups.map(g => (
@@ -25,7 +27,7 @@ export function RelationsTab({ person: p, groups }: { person: Person; groups: Ki
                   {yearLine(item.other) ? ' · ' + yearLine(item.other) : ''}
                 </small>
               </div>
-              {item.rel && (
+              {item.rel && acc.canUnlink(item.rel) && (
                 <button
                   className="ghost danger rel-del"
                   title="Удалить связь"

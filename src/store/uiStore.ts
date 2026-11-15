@@ -21,7 +21,7 @@ const store = {
   },
 };
 
-export type PanelTab = 'info' | 'media' | 'documents' | 'relations' | 'bio';
+export type PanelTab = 'info' | 'media' | 'documents' | 'relations' | 'bio' | 'stories';
 
 export interface FormContext {
   /** редактирование существующего или null — новый человек */
@@ -73,6 +73,8 @@ interface UiState {
   storiesOpen: boolean;
   /** какую историю показать при открытии панели историй */
   storyId: string | null;
+  /** открыть редактор новой истории с этим человеком */
+  storyNewFor: string | null;
 
   toast: { text: string; key: number } | null;
   confirmReq: ConfirmRequest | null;
@@ -95,6 +97,7 @@ interface UiState {
   setStoriesOpen(v: boolean): void;
   /** открыть панель историй сразу на конкретной истории */
   openStory(id: string): void;
+  newStory(personId: string): void;
 
   showToast(text: string): void;
   confirm(o: ConfirmOptions): Promise<boolean | 'alt'>;
@@ -118,6 +121,7 @@ export const useUi = create<UiState>((set, get) => ({
   panel: { open: false, personId: null, tab: 'info', form: null, formDirty: false },
   storiesOpen: false,
   storyId: null,
+  storyNewFor: null,
   toast: null,
   confirmReq: null,
   cropReq: null,
@@ -159,6 +163,9 @@ export const useUi = create<UiState>((set, get) => ({
   },
   setStoriesOpen(storiesOpen) {
     set(s => ({ storiesOpen, storyId: null, panel: storiesOpen ? { ...s.panel, open: false, form: null } : s.panel }));
+  },
+  newStory(personId) {
+    set(s => ({ storiesOpen: true, storyId: null, storyNewFor: personId, panel: { ...s.panel, open: false, form: null } }));
   },
   openStory(id) {
     set(s => ({ storiesOpen: true, storyId: id, panel: { ...s.panel, open: false, form: null } }));

@@ -1,22 +1,7 @@
 /* Создание и проверка данных. Всё, что приходит из файла (архив, старый ZIP/JSON), считается
    недоверенным: каждое поле приводится к ожидаемому типу, лишнее отбрасывается. */
 import { normDate } from './people';
-import type {
-  ArchiveData,
-  ArchiveMeta,
-  BioSection,
-  Burial,
-  Gender,
-  HistoryEntry,
-  MediaItem,
-  MediaKind,
-  Person,
-  RelType,
-  Relation,
-  Social,
-  SocialNetwork,
-  Story,
-} from './types';
+import type { ArchiveData, ArchiveMeta, BioSection, Burial, Gender, HistoryEntry, MediaItem, MediaKind, Person, RelType, Relation, Social, SocialNetwork, Story, AccessUser, Tombstone } from './types';
 
 export const newId = (): string => crypto.randomUUID();
 
@@ -177,6 +162,7 @@ export function normalizePerson(raw: unknown, seqFallback: number): Person | nul
     collapsed: !!p.collapsed,
     createdAt: num(p.createdAt, base.createdAt),
     updatedAt: num(p.updatedAt, base.updatedAt),
+    ...stamps(p),
   };
 }
 
@@ -186,7 +172,7 @@ export function normalizeRelation(raw: unknown, personIds: Set<string>): Relatio
   if (!isId(r.id) || !isId(r.from) || !isId(r.to) || r.from === r.to) return null;
   if (!personIds.has(r.from) || !personIds.has(r.to)) return null;
   const type = REL_TYPES.includes(r.type as RelType) ? (r.type as RelType) : 'other';
-  return { id: r.id, from: r.from, to: r.to, type };
+  return { id: r.id, from: r.from, to: r.to, type, ...(typeof r.createdAt === 'number' ? { createdAt: r.createdAt } : null), ...stamps(r) };
 }
 
 export const MEDIA_KINDS: MediaKind[] = ['photo', 'video', 'audio', 'document'];
@@ -204,6 +190,9 @@ export function normalizeMedia(raw: unknown): MediaItem | null {
     sha256: str(m.sha256, 64),
     createdAt: num(m.createdAt, Date.now()),
     people: [...new Set(ids(m.people))],
+    date: str(m.date, 60),
+    ...(typeof m.updatedAt === 'number' ? { updatedAt: m.updatedAt } : null),
+    ...stamps(m),
   };
 }
 
@@ -220,7 +209,49 @@ export function normalizeStory(raw: unknown): Story | null {
     mediaIds: ids(s.mediaIds),
     createdAt: num(s.createdAt, Date.now()),
     updatedAt: num(s.updatedAt, Date.now()),
+    ...stamps(s),
   };
+}
+
+/** «кто создал / изменил» — только корректные id */
+function stamps(o: Record<string, unknown>): { createdBy?: string; updatedBy?: string } {
+  return { ...(isId(o.createdBy) ? { createdBy: o.createdBy } : null), ...(isId(o.updatedBy) ? { updatedBy: o.updatedBy } : null) };
+}
+
+const RIGHTS = ['change', 'add', 'delete'] as const;
+
+export function normalizeUser(raw: unknown): AccessUser | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const u = raw as Record<string, unknown>;
+  if (!isId(u.id)) return null;
+  const can = (u.can && typeof u.can === 'object' ? u.can : {}) as Record<string, unknown>;
+  const role = u.role === 'owner' ? 'owner' : 'member';
+  return {
+    id: u.id,
+    login: normLogin(str(u.login, 60)),
+    name: str(u.name, 100),
+    role,
+    root: role === 'owner' ? null : isId(u.root) ? u.root : null,
+    can: Object.fromEntries(RIGHTS.map(r => [r, role === 'owner' || can[r] === true])) as AccessUser['can'],
+    createdAt: num(u.createdAt, Date.now()),
+    syncedAt: num(u.syncedAt, num(u.createdAt, Date.now())),
+  };
+}
+
+/** Логин: без пробелов по краям, в нижнем регистре. */
+export const normLogin = (s: string) => s.normalize('NFC').trim().toLowerCase();
+
+export function normalizeTombstone(raw: unknown): Tombstone | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const t = raw as Record<string, unknown>;
+  if (!isId(t.id) || !['person', 'relation', 'media', 'story'].includes(t.entity as string)) return null;
+  return { entity: t.entity as Tombstone['entity'], id: t.id, ts: num(t.ts, 0), by: isId(t.by) ? t.by : '' };
+}
+
+/** Владелец по умолчанию: архив без списка доступов (старые файлы) — один владелец без логина. */
+export function ownerUser(id = newId()): AccessUser {
+  const now = Date.now();
+  return { id, login: '', name: 'Владелец', role: 'owner', root: null, can: { change: true, add: true, delete: true }, createdAt: now, syncedAt: now };
 }
 
 export function normalizeHistory(raw: unknown): HistoryEntry | null {
@@ -265,6 +296,8 @@ export function normalizeArchive(raw: {
   media: unknown;
   stories: unknown;
   history: unknown;
+  access?: unknown;
+  deleted?: unknown;
 }): ArchiveData {
   const meta = normalizeMeta(raw.meta);
   const persons: Person[] = [];
@@ -306,5 +339,17 @@ export function normalizeArchive(raw: {
     .map(s => ({ ...s, personIds: s.personIds.filter(id => seen.has(id)), mediaIds: s.mediaIds.filter(id => mediaIds.has(id)) }));
   const history = (Array.isArray(raw.history) ? raw.history : []).map(normalizeHistory).filter((h): h is HistoryEntry => !!h);
   meta.nextSeq = Math.max(meta.nextSeq, ...persons.map(p => p.seq + 1), 1);
-  return { meta, persons, relations, media, stories, history };
+  // доступы: ровно один владелец; у участников корень ветки — существующий человек
+  const accessRaw = (raw.access && typeof raw.access === 'object' ? (raw.access as { users?: unknown }).users : null) ?? [];
+  const users: AccessUser[] = [];
+  (Array.isArray(accessRaw) ? accessRaw : []).forEach(r => {
+    const u = normalizeUser(r);
+    if (!u || users.some(x => x.id === u.id || (u.login && x.login === u.login))) return;
+    if (u.role === 'owner' && users.some(x => x.role === 'owner')) u.role = 'member';
+    if (u.root && !seen.has(u.root)) u.root = null;
+    users.push(u);
+  });
+  if (!users.some(u => u.role === 'owner')) users.unshift(ownerUser());
+  const deleted = (Array.isArray(raw.deleted) ? raw.deleted : []).map(normalizeTombstone).filter((t): t is Tombstone => !!t);
+  return { meta, persons, relations, media, stories, history, access: { users }, deleted };
 }

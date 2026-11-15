@@ -1,3 +1,4 @@
+import { useAccess } from '../../hooks/useAccess';
 import { useState } from 'react';
 import { formatSize } from '../../archive/media';
 import { useMediaUrl } from '../../hooks/useMediaUrl';
@@ -8,6 +9,7 @@ import { Icon } from '../../ui/Icon';
 /** Сведения об архиве: название, описание, обложка, состав, файл. */
 export function ArchiveInfoDialog({ onClose }: { onClose(): void }) {
   const data = useArchive(s => s.data)!;
+  const owner = useAccess().canManageArchive;
   const fileName = useSession(s => s.fileName);
   const [title, setTitle] = useState(data.meta.title);
   const [description, setDescription] = useState(data.meta.description);
@@ -33,11 +35,11 @@ export function ArchiveInfoDialog({ onClose }: { onClose(): void }) {
           <div className="form-grid">
             <div className="field full">
               <label htmlFor="ai_title">Название</label>
-              <input id="ai_title" value={title} maxLength={200} onChange={e => setTitle(e.target.value)} />
+              <input id="ai_title" value={title} maxLength={200} readOnly={!owner} onChange={e => setTitle(e.target.value)} />
             </div>
             <div className="field full">
               <label htmlFor="ai_desc">Описание</label>
-              <textarea id="ai_desc" value={description} onChange={e => setDescription(e.target.value)} />
+              <textarea id="ai_desc" value={description} readOnly={!owner} onChange={e => setDescription(e.target.value)} />
             </div>
           </div>
           <div className="archive-stats">
@@ -74,8 +76,9 @@ export function ArchiveInfoDialog({ onClose }: { onClose(): void }) {
         </div>
         <div className="modal-footer">
           <button className="ghost" onClick={onClose}>
-            Отмена
+            {owner ? 'Отмена' : 'Закрыть'}
           </button>
+          {owner && (
           <button
             className="primary"
             onClick={() => {
@@ -86,6 +89,7 @@ export function ArchiveInfoDialog({ onClose }: { onClose(): void }) {
           >
             Сохранить
           </button>
+          )}
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { useAccess } from '../../hooks/useAccess';
 import { addPersonFlow } from '../../flows/personFlows';
 import { useArchive } from '../../store/archiveStore';
 import { useSession } from '../../store/sessionStore';
@@ -9,6 +10,7 @@ import { SAVE_TEXT } from '../app/SaveStatus';
     Порядок: Истории, Выровнять | Сохранить, Добавить. Несохранённые изменения — жёлтый индикатор на «Сохранить». */
 export function ActionDock() {
   const status = useArchive(s => s.status);
+  const acc = useAccess();
   const storiesOpen = useUi(s => s.storiesOpen);
   const storyCount = useArchive(s => s.data?.stories.length ?? 0);
   const saveState = status === 'dirty' ? ' unsaved' : status === 'error' ? ' save-error' : '';
@@ -28,6 +30,7 @@ export function ActionDock() {
         <span className="dock-label">Истории</span>
       </button>
 
+      {acc.canManageArchive && (
       <button
         className="dock-btn"
         title="Автовыравнивание по поколениям"
@@ -42,6 +45,7 @@ export function ActionDock() {
         </span>
         <span className="dock-label">Выровнять</span>
       </button>
+      )}
 
       <span className="dock-sep" />
 
@@ -59,12 +63,14 @@ export function ActionDock() {
         <span className="dock-label">{status === 'saving' ? 'Сохраняю' : 'Сохранить'}</span>
       </button>
 
+      {acc.canAddFree() && (
       <button className="dock-btn primary-dock" title="Добавить человека" onClick={() => addPersonFlow()}>
         <span className="dock-ico">
           <Icon name="plus" size={22} />
         </span>
         <span className="dock-label">Добавить</span>
       </button>
+      )}
     </nav>
   );
 }

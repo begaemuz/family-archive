@@ -115,7 +115,27 @@ export function StartScreen() {
   );
 }
 
+/** Поле логина. Пустой логин — вход владельца, если он не задавал себе логин. */
+function LoginField({ id, value, onChange, autoFocus }: { id: string; value: string; onChange(v: string): void; autoFocus?: boolean }) {
+  return (
+    <div className="field login-field">
+      <label htmlFor={id}>Логин</label>
+      <input
+        id={id}
+        value={value}
+        autoFocus={autoFocus}
+        autoComplete="username"
+        autoCapitalize="none"
+        spellCheck={false}
+        placeholder="Если вам выдали доступ — ваш логин"
+        onChange={e => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
 function UnlockForm({ fileName }: { fileName: string }) {
+  const [login, setLogin] = useState('');
   const [pw, setPw] = useState('');
   const [error, setError] = useState('');
   const busy = useSession(s => s.busy);
@@ -126,7 +146,7 @@ function UnlockForm({ fileName }: { fileName: string }) {
         e.preventDefault();
         setError('');
         try {
-          await useSession.getState().unlock(pw);
+          await useSession.getState().unlock(login, pw);
         } catch (err) {
           setError(errText(err));
           if (err instanceof ArchiveError && err.code !== 'wrong-password') return;
@@ -137,11 +157,12 @@ function UnlockForm({ fileName }: { fileName: string }) {
       <div className="start-logo lock">
         <Icon name="lock" size={30} />
       </div>
-      <h2>Введите пароль</h2>
+      <h2>Вход в архив</h2>
       <p className="start-sub">
-        Архив <b>{fileName}</b> зашифрован. Он откроется прямо в браузере — пароль и данные никуда не отправляются.
+        Архив <b>{fileName}</b> зашифрован. Он откроется прямо в браузере — логин, пароль и данные никуда не отправляются.
       </p>
-      <PasswordField id="unlock_pw" label="Пароль архива" value={pw} onChange={setPw} autoFocus />
+      <LoginField id="unlock_login" value={login} onChange={setLogin} />
+      <PasswordField id="unlock_pw" label="Пароль" value={pw} onChange={setPw} autoFocus />
       {error && <div className="form-error">{error}</div>}
       <div className="start-actions">
         <button type="button" className="ghost" onClick={() => useSession.getState().cancelPending()} disabled={!!busy}>
@@ -156,6 +177,7 @@ function UnlockForm({ fileName }: { fileName: string }) {
 }
 
 function RestoreForm({ title, saved, onBack }: { title: string; saved: boolean; onBack(): void }) {
+  const [login, setLogin] = useState('');
   const [pw, setPw] = useState('');
   const [error, setError] = useState('');
   const busy = useSession(s => s.busy);
@@ -166,7 +188,7 @@ function RestoreForm({ title, saved, onBack }: { title: string; saved: boolean; 
         e.preventDefault();
         setError('');
         try {
-          await useSession.getState().restore(pw);
+          await useSession.getState().restore(login, pw);
         } catch (err) {
           setError(errText(err));
           setPw('');
@@ -180,15 +202,16 @@ function RestoreForm({ title, saved, onBack }: { title: string; saved: boolean; 
       <p className="start-sub">
         {saved ? (
           <>
-            Архив <b>«{title}»</b> был открыт до обновления страницы. Введите пароль, чтобы продолжить.
+            Архив <b>«{title}»</b> был открыт до обновления страницы. Введите логин и пароль, чтобы продолжить.
           </>
         ) : (
           <>
-            Несохранённые изменения архива <b>«{title}»</b> хранятся в браузере в зашифрованном виде. Введите пароль этого архива.
+            Несохранённые изменения архива <b>«{title}»</b> хранятся в браузере в зашифрованном виде. Введите логин и пароль этого архива.
           </>
         )}
       </p>
-      <PasswordField id="restore_pw" label="Пароль архива" value={pw} onChange={setPw} autoFocus />
+      <LoginField id="restore_login" value={login} onChange={setLogin} />
+      <PasswordField id="restore_pw" label="Пароль" value={pw} onChange={setPw} autoFocus />
       {error && <div className="form-error">{error}</div>}
       <div className="start-actions">
         <button type="button" className="ghost" onClick={onBack} disabled={!!busy}>
@@ -206,6 +229,7 @@ function CreateForm({ mode, count, onBack }: { mode: 'create' | 'import'; count?
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [cover, setCover] = useState<File | null>(null);
+  const [login, setLogin] = useState('');
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
   const [error, setError] = useState('');
@@ -219,8 +243,8 @@ function CreateForm({ mode, count, onBack }: { mode: 'create' | 'import'; count?
     if (pw.length < 8) return setError('Пароль — не короче 8 символов');
     if (pw !== pw2) return setError('Пароли не совпадают');
     try {
-      if (mode === 'create') await useSession.getState().createArchive({ title, description, password: pw, cover });
-      else await useSession.getState().finishImport({ title, description, password: pw });
+      if (mode === 'create') await useSession.getState().createArchive({ title, description, login, password: pw, cover });
+      else await useSession.getState().finishImport({ title, description, login, password: pw });
     } catch (e) {
       setError(errText(e));
     }
@@ -276,6 +300,10 @@ function CreateForm({ mode, count, onBack }: { mode: 'create' | 'import'; count?
             </div>
           </div>
         )}
+        <div className="field">
+          <label htmlFor="c_login">Ваш логин (необязательно)</label>
+          <input id="c_login" value={login} autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="Можно оставить пустым — вход только по паролю" onChange={e => setLogin(e.target.value)} />
+        </div>
         <PasswordField id="c_pw" label="Пароль (не короче 8 символов)" value={pw} onChange={setPw} showStrength autoComplete="new-password" />
         <PasswordField id="c_pw2" label="Пароль ещё раз" value={pw2} onChange={setPw2} autoComplete="new-password" />
       </div>

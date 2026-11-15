@@ -7,12 +7,16 @@ import { useUi } from '../../store/uiStore';
 import { Icon } from '../../ui/Icon';
 import { ArchiveInfoDialog } from './ArchiveInfoDialog';
 import { ChangePasswordDialog } from './ChangePasswordDialog';
+import { AccessDialog } from './AccessDialog';
+import { pickArchiveFile } from '../../archive/fileAccess';
+import { useAccess } from '../../hooks/useAccess';
 
 /** Название открытого архива и действия с ним. */
 export function ArchiveMenu() {
   const title = useArchive(s => s.data?.meta.title ?? '');
   const [open, setOpen] = useState(false);
-  const [dialog, setDialog] = useState<'info' | 'password' | null>(null);
+  const [dialog, setDialog] = useState<'info' | 'password' | 'access' | null>(null);
+  const acc = useAccess();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -65,6 +69,26 @@ export function ArchiveMenu() {
             exportPdfBook();
           })}
           {item('key', 'Изменить пароль', () => setDialog('password'))}
+          {acc.canManageArchive && (
+            <>
+              <div className="menu-sep" />
+              {item('users', 'Доступы', () => setDialog('access'))}
+              {item('archive', 'Объединить с копией…', async () => {
+                const r = await pickArchiveFile();
+                if (!r) return;
+                try {
+                  await useSession.getState().openMerge(r.file);
+                  const m = useSession.getState().merge;
+                  if (m && !m.plan.items.length && !m.plan.rejected.length) {
+                    useSession.getState().cancelMerge();
+                    useUi.getState().showToast('В этой копии нет новых правок участников');
+                  }
+                } catch (e) {
+                  useUi.getState().showToast((e as Error).message || 'Не удалось открыть копию');
+                }
+              })}
+            </>
+          )}
           <div className="menu-sep" />
           {item('archive', 'Создать новый архив', async () => (await leave()) && useSession.getState().closeArchive())}
           {item('logout', 'Закрыть архив', async () => (await leave()) && useSession.getState().closeArchive(), true)}
@@ -74,6 +98,7 @@ export function ArchiveMenu() {
           отсчитывался бы от шапки, а не от экрана (окно уезжало за край) */}
       {dialog === 'info' && createPortal(<ArchiveInfoDialog onClose={() => setDialog(null)} />, document.body)}
       {dialog === 'password' && createPortal(<ChangePasswordDialog onClose={() => setDialog(null)} />, document.body)}
+      {dialog === 'access' && createPortal(<AccessDialog onClose={() => setDialog(null)} />, document.body)}
     </div>
   );
 }

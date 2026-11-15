@@ -22,6 +22,9 @@ interface Props {
   /** видимых потомков (кнопка «свернуть» только если они есть) */
   visibleDesc: number;
   actions: CardActions;
+  /** права: менять этого человека / добавлять от него связи (у участника — только в своей ветке) */
+  canEdit: boolean;
+  canLink: boolean;
 }
 
 /* Иконки кнопок вокруг круга — как в прежней версии (26 px). */
@@ -31,7 +34,7 @@ const BtnIcon = ({ d }: { d: React.ReactNode }) => (
   </svg>
 );
 
-export const PersonCard = memo(function PersonCard({ person: p, selected, linkTarget, descCount, visibleDesc, actions }: Props) {
+export const PersonCard = memo(function PersonCard({ person: p, selected, linkTarget, descCount, visibleDesc, actions, canEdit, canLink }: Props) {
   const photo = useMediaUrl(p.mainPhotoId);
   const stop = (e: React.PointerEvent | React.MouseEvent) => {
     e.preventDefault();
@@ -63,6 +66,7 @@ export const PersonCard = memo(function PersonCard({ person: p, selected, linkTa
         >
           <BtnIcon d={<><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>} />
         </button>
+        {canEdit && (
         <button
           className="direction-btn direction-left"
           title="Редактировать"
@@ -74,6 +78,8 @@ export const PersonCard = memo(function PersonCard({ person: p, selected, linkTa
         >
           <BtnIcon d={<><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></>} />
         </button>
+        )}
+        {canLink && (
         <button
           className="direction-btn direction-right"
           title="Добавить связь (нажмите или потяните к человеку)"
@@ -85,6 +91,7 @@ export const PersonCard = memo(function PersonCard({ person: p, selected, linkTa
         >
           <BtnIcon d={<path d="M12 5v14M5 12h14" />} />
         </button>
+        )}
         {(showCollapse || showExpand) && (
           <button
             className={'direction-btn direction-down' + (showExpand ? ' expand' : '')}

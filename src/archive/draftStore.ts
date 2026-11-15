@@ -1,8 +1,8 @@
 /* Снимок открытого архива — чтобы обновление страницы или случайно закрытая вкладка ничего не теряли.
    Хранится в IndexedDB ТОЛЬКО в зашифрованном виде тем же ключом, что и архив:
    без пароля его не прочитать. Пароль и ключ не сохраняются. Удаляется при «Закрыть архив». */
-import { decrypt, deriveKey, encrypt, type KdfParams } from './crypto';
-import type { SessionKey } from './container';
+import { decrypt, deriveKey, encrypt, randomBytes, sha256, type KdfParams } from './crypto';
+import { importDataKey, openSlot, type KeySlot, type SessionKey } from './keys';
 import type { FSHandle } from './fileAccess';
 import { normalizeArchive } from '../domain/normalize';
 import type { ArchiveData } from '../domain/types';
@@ -16,13 +16,18 @@ export interface DraftInfo {
   archiveId: string;
   title: string;
   fileName: string;
-  kdf: KdfParams;
   savedAt: number;
   /** все изменения уже записаны в файл (снимок нужен только чтобы продолжить работу) */
   saved: boolean;
 }
 
 interface DraftRecord extends DraftInfo {
+  /** ячейки пользователей (как в файле) — восстановление по логину-паролю */
+  slots?: KeySlot[];
+  /** старые черновики: ключ — Argon2id(пароль) */
+  kdf?: KdfParams;
+  /** отпечаток ключа данных: сменился ключ — медиа шифруются заново */
+  keyId?: string;
   json: { nonce: Uint8Array; ct: Uint8Array };
   mediaIds: string[];
   /** ссылка на файл (File System Access) — чтобы «Сохранить» снова писало в тот же файл */
@@ -66,7 +71,9 @@ export async function saveDraft(
   extra: { saved: boolean; handle: FSHandle | null },
 ): Promise<void> {
   const prev = (await tx<DraftRecord>('readonly', s => s.get('session')).catch(() => undefined)) as DraftRecord | undefined;
-  const have = new Set(prev && prev.archiveId === data.meta.id ? prev.mediaIds : []);
+  const keyId = await keyIdOf(sk);
+  // медиа уже зашифрованы этим же ключом — повторно не шифруем
+  const have = new Set(prev && prev.archiveId === data.meta.id && prev.keyId === keyId ? prev.mediaIds : []);
   const newMedia: [string, { nonce: Uint8Array; ct: Uint8Array }][] = [];
   for (const m of data.media) {
     if (have.has(m.id)) continue;
@@ -79,7 +86,8 @@ export async function saveDraft(
     archiveId: data.meta.id,
     title: data.meta.title,
     fileName,
-    kdf: sk.kdf,
+    slots: sk.slots,
+    keyId,
     savedAt: Date.now(),
     saved: extra.saved,
     handle: extra.handle,
@@ -89,7 +97,7 @@ export async function saveDraft(
   const keep = new Set(rec.mediaIds);
   const write = (r: DraftRecord) =>
     tx('readwrite', s => {
-      if (prev && prev.archiveId !== data.meta.id) s.clear();
+      if (prev && (prev.archiveId !== data.meta.id || prev.keyId !== keyId)) s.clear();
       s.put(r, 'session');
       newMedia.forEach(([id, v]) => s.put(v, 'media:' + id));
       (prev?.mediaIds || []).filter(id => !keep.has(id)).forEach(id => s.delete('media:' + id));
@@ -105,19 +113,39 @@ export async function draftInfo(): Promise<DraftInfo | null> {
   try {
     const r = (await tx<DraftRecord>('readonly', s => s.get('session'))) as DraftRecord | undefined;
     // у старых черновиков поля saved нет — значит, это были несохранённые изменения
-    return r ? { archiveId: r.archiveId, title: r.title, fileName: r.fileName, kdf: r.kdf, savedAt: r.savedAt, saved: r.saved ?? false } : null;
+    return r ? { archiveId: r.archiveId, title: r.title, fileName: r.fileName, savedAt: r.savedAt, saved: r.saved ?? false } : null;
   } catch {
     return null;
   }
 }
 
-/** Восстановить черновик паролем. Бросает 'wrong-password', если пароль не подходит. */
+async function keyIdOf(sk: SessionKey): Promise<string> {
+  const h = await sha256(new Uint8Array([...new TextEncoder().encode('rodiva-key-id:'), ...sk.raw]));
+  return [...h.subarray(0, 12)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+/** Восстановить черновик логином и паролем. Бросает 'wrong-password', если не подходят.
+    legacy — черновик старого формата: сессия получает новый ключ данных, ячейку владельца заводит сессия. */
 export async function restoreDraft(
+  login: string,
   password: string,
-): Promise<{ data: ArchiveData; blobs: Map<string, Blob>; sk: SessionKey; fileName: string; saved: boolean; handle: FSHandle | null }> {
+): Promise<{ data: ArchiveData; blobs: Map<string, Blob>; sk: SessionKey; fileName: string; saved: boolean; handle: FSHandle | null; legacy: boolean }> {
   const r = (await tx<DraftRecord>('readonly', s => s.get('session'))) as DraftRecord | undefined;
   if (!r) throw new Error('no-draft');
-  const key = await deriveKey(password, r.kdf);
+  let key: CryptoKey;
+  let sk: SessionKey;
+  let legacy = false;
+  if (r.slots?.length) {
+    const opened = await openSlot(r.slots, r.archiveId, login, password);
+    if (!opened) throw new Error('wrong-password');
+    key = await importDataKey(opened.raw);
+    sk = { key, raw: opened.raw, slots: r.slots, userId: opened.userId };
+  } else if (r.kdf) {
+    key = await deriveKey(password, r.kdf);
+    const raw = randomBytes(32);
+    sk = { key: await importDataKey(raw), raw, slots: [], userId: '' };
+    legacy = true;
+  } else throw new Error('no-draft');
   let raw: unknown;
   try {
     raw = JSON.parse(dec.decode(await decrypt(key, r.json.nonce, r.json.ct, jsonAad(r.archiveId))));
@@ -125,7 +153,7 @@ export async function restoreDraft(
     throw new Error('wrong-password');
   }
   const d = raw as ArchiveData;
-  const data = normalizeArchive({ meta: d.meta, persons: d.persons, relations: d.relations, media: d.media, stories: d.stories, history: d.history });
+  const data = normalizeArchive({ meta: d.meta, persons: d.persons, relations: d.relations, media: d.media, stories: d.stories, history: d.history, access: d.access, deleted: d.deleted });
   const blobs = new Map<string, Blob>();
   for (const m of data.media) {
     const v = (await tx<{ nonce: Uint8Array; ct: Uint8Array }>('readonly', s => s.get('media:' + m.id))) as
@@ -138,7 +166,7 @@ export async function restoreDraft(
       /* повреждённый файл черновика — пропускаем */
     }
   }
-  return { data, blobs, sk: { key, kdf: r.kdf }, fileName: r.fileName, saved: r.saved ?? false, handle: r.handle ?? null };
+  return { data, blobs, sk, fileName: r.fileName, saved: r.saved ?? false, handle: r.handle ?? null, legacy };
 }
 
 export async function clearDraft(): Promise<void> {

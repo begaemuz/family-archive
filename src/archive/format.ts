@@ -5,6 +5,8 @@
      media.json             — описания файлов (тип, имя, размер, SHA-256, кто отмечен на фото)
      stories/stories.json   — семейные истории
      history/history.json   — история изменений
+     access.json            — пользователи и их права (владелец, участники с веткой)
+     deleted.json           — метки удалений (для слияния копий)
      photos/<id>.<ext>  video/…  audio/…  documents/…
    При чтении всё проверяется заново: тип файла — по содержимому, целостность — по SHA-256. */
 import { strFromU8, strToU8, unzipSync, zipSync, type Zippable } from 'fflate';
@@ -13,7 +15,7 @@ import type { ArchiveData, MediaKind } from '../domain/types';
 import { extFromMime, sha256Hex, sniff } from './media';
 import { ArchiveError, FORMAT_VERSION } from './container';
 
-export const APP_VERSION = 'family-archive/0.1';
+export const APP_VERSION = 'rodiva/0.2';
 
 const FOLDER: Record<MediaKind, string> = { photo: 'photos', video: 'video', audio: 'audio', document: 'documents' };
 
@@ -43,6 +45,8 @@ export async function packArchive(data: ArchiveData, blobOf: (id: string) => Blo
     'media.json': json(data.media),
     'stories/stories.json': json(data.stories),
     'history/history.json': json(data.history),
+    'access.json': json(data.access),
+    'deleted.json': json(data.deleted),
   };
   for (const m of data.media) {
     const blob = blobOf(m.id);
@@ -87,6 +91,8 @@ export async function unpackArchive(payload: Uint8Array): Promise<UnpackResult> 
     media: read('media.json'),
     stories: read('stories/stories.json'),
     history: read('history/history.json'),
+    access: read('access.json'),
+    deleted: read('deleted.json'),
   });
 
   // файлы медиа: ищем по id, проверяем тип по содержимому и SHA-256

@@ -5,6 +5,7 @@ import { descGraph, descendantsOf } from '../../domain/graph';
 import { freeX, guideLines } from '../../domain/layout';
 import { useArchive } from '../../store/archiveStore';
 import { useUi } from '../../store/uiStore';
+import { access, useAccess } from '../../hooks/useAccess';
 import { clientToWorld, registerCanvas, visibleArea } from '../../flows/canvasGeometry';
 import { closeSidePanelsFlow, createRelativeFlow, editPersonFlow, viewPersonFlow } from '../../flows/personFlows';
 import { PersonCard, type CardActions } from './PersonCard';
@@ -45,6 +46,7 @@ export function TreeCanvas() {
   const view = useUi(s => s.view);
   const setView = useUi(s => s.setView);
   const selectedId = useUi(s => s.selectedId);
+  const acc = useAccess();
   const dots = useUi(s => s.dots);
   const fitTick = useUi(s => s.fitTick);
 
@@ -236,6 +238,7 @@ export function TreeCanvas() {
         const q = clientToWorld(e.clientX, e.clientY);
         suppressClick.current = null;
         useUi.getState().select(id);
+        if (!access().canEditPerson(id)) return; // чужую ветку двигать нельзя — только выделить
         drag.current = { id, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, dx: q.x - p.x, moved: false };
         try {
           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -337,6 +340,8 @@ export function TreeCanvas() {
               descCount={desc.get(p.id)?.all ?? 0}
               visibleDesc={desc.get(p.id)?.visible ?? 0}
               actions={actions}
+              canEdit={acc.canEditPerson(p.id)}
+              canLink={acc.canAddNear(p.id)}
             />
           ))}
         </div>

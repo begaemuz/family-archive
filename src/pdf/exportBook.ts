@@ -184,11 +184,11 @@ export async function buildBook(data: ArchiveData, onStep: (s: string) => void):
     // свои фото и фото других людей, где человек отмечен
     const mine = personMedia(p, data.media, persons).map(e => e.item);
     const albumPhotos = mine.filter(m => m.kind === 'photo');
-    const albumImgs: string[] = [];
+    const albumImgs: { url: string; date: string }[] = [];
     for (const m of albumPhotos.slice(0, 12)) {
       const b = mediaRegistry.get(m.id);
       const j = b ? await toJpeg(b, 700) : null;
-      if (j) albumImgs.push(j.url);
+      if (j) albumImgs.push({ url: j.url, date: m.date });
     }
     const others = mine.filter(m => m.kind !== 'photo');
     const videos = others.filter(m => m.kind === 'video').length;
@@ -216,7 +216,14 @@ export async function buildBook(data: ArchiveData, onStep: (s: string) => void):
       block.push(sectionTitle(`Фотографии${albumPhotos.length > albumImgs.length ? ` (показаны ${albumImgs.length} из ${albumPhotos.length})` : ''}`));
       for (let i = 0; i < albumImgs.length; i += 3)
         block.push({
-          columns: albumImgs.slice(i, i + 3).map(u => ({ image: u, fit: [160, 160] as [number, number], width: 165 })),
+          // под фото — дата снимка, если указана
+          columns: albumImgs.slice(i, i + 3).map(a => ({
+            width: 165,
+            stack: [
+              { image: a.url, fit: [160, 160] as [number, number] },
+              ...(a.date ? [{ text: a.date, fontSize: 8.5, color: C.muted, margin: [0, 3, 0, 0] as [number, number, number, number] }] : []),
+            ],
+          })),
           columnGap: 8,
           margin: [0, 0, 0, 8],
         });
