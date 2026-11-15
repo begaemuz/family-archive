@@ -63,6 +63,7 @@ export async function prepareFiles(files: File[], allowed: MediaKind[]): Promise
         size: blob.size,
         sha256: await sha256Hex(blob),
         createdAt: Date.now(),
+        people: [],
       },
       blob,
     });
@@ -83,7 +84,7 @@ export async function addCoverToData(data: ArchiveData, blobs: Map<string, Blob>
 /** Квадратное фото профиля из уже обрезанного Blob. */
 export async function preparedFromBlob(blob: Blob, name: string): Promise<PreparedMedia> {
   return {
-    item: { id: newId(), kind: 'photo', mime: blob.type || 'image/jpeg', name, size: blob.size, sha256: await sha256Hex(blob), createdAt: Date.now() },
+    item: { id: newId(), kind: 'photo', mime: blob.type || 'image/jpeg', name, size: blob.size, sha256: await sha256Hex(blob), createdAt: Date.now(), people: [] },
     blob,
   };
 }

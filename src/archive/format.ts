@@ -2,7 +2,7 @@
      manifest.json          — версия формата, сведения об архиве
      persons.json           — люди
      relationships.json     — родственные связи
-     media.json             — описания файлов (тип, имя, размер, SHA-256)
+     media.json             — описания файлов (тип, имя, размер, SHA-256, кто отмечен на фото)
      stories/stories.json   — семейные истории
      history/history.json   — история изменений
      photos/<id>.<ext>  video/…  audio/…  documents/…

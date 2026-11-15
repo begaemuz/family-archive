@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { relationGroups } from '../../domain/kinship';
+import { personMedia } from '../../domain/mediaPeople';
 import { ageText, fullName, genderClass, initials, yearLine } from '../../domain/people';
 import type { Person } from '../../domain/types';
 import { askDeletePerson, editPersonFlow } from '../../flows/personFlows';
@@ -27,6 +28,9 @@ export function PersonView({ person: p }: { person: Person }) {
   const groups = useMemo(() => relationGroups(p, persons, relations), [p, persons, relations]);
   const relCount = groups.reduce((s, g) => s + g.items.length, 0);
   const stories = useArchive(s => s.data!.stories);
+  const media = useArchive(s => s.data!.media);
+  // в счётчике «Медиа» — и фото других людей, где этот человек отмечен
+  const mediaCount = useMemo(() => personMedia(p, media, persons).length, [p, media, persons]);
   const storyCount = useMemo(() => stories.filter(s => s.personIds.includes(p.id)).length, [stories, p.id]);
   const chips = [p.gender, ageText(p), p.occupation].filter(Boolean);
 
@@ -48,7 +52,7 @@ export function PersonView({ person: p }: { person: Person }) {
 
   const tabs: [PanelTab, string, number | null][] = [
     ['info', 'Основное', null],
-    ['media', 'Медиа', p.media.length || null],
+    ['media', 'Медиа', mediaCount || null],
     ['documents', 'Документы', p.documents.length || null],
     ['relations', 'Связи', relCount || null],
     ['bio', 'Биография', p.bio.length + storyCount || null],

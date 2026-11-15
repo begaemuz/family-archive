@@ -109,17 +109,39 @@ export async function askDeleteRelation(viewerId: string, r: Relation) {
   ui().showToast('Связь удалена');
 }
 
-export async function askDeleteMedia(mediaId: string, ownerId?: string | null) {
+export async function askDeleteMedia(mediaId: string, viewerId?: string | null) {
   const d = archive().data;
   const m = d?.media.find(x => x.id === mediaId);
   if (!d || !m) return false;
   const what = { photo: 'фото', video: 'видео', audio: 'аудиозапись', document: 'документ' }[m.kind];
-  const owner = ownerId ? d.persons.find(p => p.id === ownerId) : null;
+  const viewer = viewerId ? d.persons.find(p => p.id === viewerId) : null;
+
+  // человек только отмечен на чужом фото — снимаем отметку, файл остаётся у владельца
+  if (viewer && m.people.includes(viewer.id) && !viewer.media.includes(mediaId)) {
+    const ok = await ui().confirm({
+      title: 'Убрать отметку?',
+      body: (
+        <>
+          {what[0].toUpperCase() + what.slice(1)} пропадёт из альбома <b>{fullName(viewer)}</b>, но останется у владельца.
+        </>
+      ),
+      ok: 'Убрать отметку',
+      danger: false,
+      icon: 'users',
+    });
+    if (ok !== true) return false;
+    archive().setMediaPeople(mediaId, m.people.filter(x => x !== viewer.id));
+    ui().showToast('Отметка убрана');
+    return true;
+  }
+
+  const tagged = m.people.length;
   const ok = await ui().confirm({
     title: `Удалить ${what}?`,
     body: (
       <>
-        «{m.name}» будет удалён{owner ? <> из архива <b>{fullName(owner)}</b></> : null}. Это нельзя отменить.
+        «{m.name}» будет удалён{viewer ? <> из архива <b>{fullName(viewer)}</b></> : null}
+        {tagged > 0 ? <> и у отмеченных на нём людей ({tagged})</> : null}. Это нельзя отменить.
       </>
     ),
     ok: 'Удалить',

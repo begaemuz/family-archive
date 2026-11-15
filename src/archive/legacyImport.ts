@@ -75,7 +75,7 @@ export async function legacyToArchive(
     const id = newId();
     const blob = new Blob([bytes as BlobPart], { type: info.mime });
     blobs.set(id, blob);
-    media.push({ id, kind: 'photo', mime: info.mime, name: `photo.${info.ext}`, size: bytes.length, sha256: await sha256Hex(bytes), createdAt: Date.now() });
+    media.push({ id, kind: 'photo', mime: info.mime, name: `photo.${info.ext}`, size: bytes.length, sha256: await sha256Hex(bytes), createdAt: Date.now(), people: [] });
     return id;
   }
 

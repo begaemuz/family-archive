@@ -1,4 +1,7 @@
+import { useMemo } from 'react';
 import { formatSize } from '../../archive/media';
+import { fullName } from '../../domain/people';
+import { personMedia, type PersonMedia } from '../../domain/mediaPeople';
 import type { MediaItem, MediaKind, Person } from '../../domain/types';
 import { prepareFiles } from '../../flows/mediaFlows';
 import { askDeleteMedia } from '../../flows/personFlows';
@@ -16,11 +19,11 @@ const SECTIONS: { kind: Kind; title: string; icon: string; accept: string; add: 
   { kind: 'audio', title: 'Аудио', icon: 'audio', accept: 'audio/*,.mp3,.m4a,.wav,.ogg,.flac', add: 'Добавить аудио' },
 ];
 
-function DeleteButton({ onDelete }: { onDelete(): void }) {
+function DeleteButton({ onDelete, title = 'Удалить' }: { onDelete(): void; title?: string }) {
   return (
     <button
       className="album-del"
-      title="Удалить"
+      title={title}
       onClick={e => {
         e.stopPropagation();
         onDelete();
@@ -31,10 +34,12 @@ function DeleteButton({ onDelete }: { onDelete(): void }) {
   );
 }
 
-function Tile({ item, onOpen, onDelete }: { item: MediaItem; onOpen(): void; onDelete(): void }) {
+function Tile({ entry, ownerName, onOpen, onDelete }: { entry: PersonMedia; ownerName: string; onOpen(): void; onDelete(): void }) {
+  const { item, own } = entry;
   const url = useMediaUrl(item.id);
+  const tagCount = item.people.length;
   return (
-    <div className={'album-item kind-' + item.kind} onClick={onOpen} title={item.name}>
+    <div className={'album-item kind-' + item.kind + (own ? '' : ' tagged')} onClick={onOpen} title={own ? item.name : `Отмечен(а) на фото из альбома: ${ownerName}`}>
       {item.kind === 'photo' && url && <img src={url} alt="" loading="lazy" draggable={false} />}
       {item.kind === 'video' && url && <video src={url} preload="metadata" muted playsInline />}
       {item.kind === 'video' && (
@@ -42,7 +47,17 @@ function Tile({ item, onOpen, onDelete }: { item: MediaItem; onOpen(): void; onD
           <Icon name="play" size={18} />
         </span>
       )}
-      <DeleteButton onDelete={onDelete} />
+      {/* чужое фото, где человек отмечен, — или своё, на котором отмечены другие */}
+      {!own ? (
+        <span className="tag-badge" title={`Из альбома: ${ownerName}`}>
+          <Icon name="users" size={13} />
+        </span>
+      ) : tagCount > 0 ? (
+        <span className="tag-badge" title={`Отмечено людей: ${tagCount}`}>
+          <Icon name="users" size={13} /> {tagCount}
+        </span>
+      ) : null}
+      <DeleteButton onDelete={onDelete} title={own ? 'Удалить' : 'Убрать отметку'} />
     </div>
   );
 }
@@ -72,7 +87,13 @@ function AudioRow({ item, onDelete }: { item: MediaItem; onDelete(): void }) {
 /** Медиа человека по разделам: фото, видео (до 200 МБ) и аудио. */
 export function MediaTab({ person: p }: { person: Person }) {
   const media = useArchive(s => s.data!.media);
-  const items = p.media.map(id => media.find(m => m.id === id)).filter((m): m is MediaItem => !!m);
+  const persons = useArchive(s => s.data!.persons);
+  // свои файлы + фото/видео других людей, где этот человек отмечен
+  const entries = useMemo(() => personMedia(p, media, persons), [p, media, persons]);
+  const nameOf = (id: string | null) => {
+    const o = id ? persons.find(x => x.id === id) : null;
+    return o ? fullName(o) : '';
+  };
   const openLightbox = useUi(s => s.openLightbox);
 
   const add = async (kind: Kind, accept: string) => {
@@ -90,7 +111,7 @@ export function MediaTab({ person: p }: { person: Person }) {
   return (
     <div className="sp-body">
       {SECTIONS.map(sec => {
-        const list = items.filter(m => m.kind === sec.kind);
+        const list = entries.filter(e => e.item.kind === sec.kind);
         return (
           <section className="media-section" key={sec.kind}>
             <div className="sp-section-title">
@@ -99,7 +120,7 @@ export function MediaTab({ person: p }: { person: Person }) {
             </div>
             {sec.kind === 'audio' ? (
               <div className="audio-list">
-                {list.map(m => (
+                {list.map(({ item: m }) => (
                   <AudioRow key={m.id} item={m} onDelete={() => askDeleteMedia(m.id, p.id)} />
                 ))}
                 <button className="audio-add" onClick={() => add(sec.kind, sec.accept)}>
@@ -108,12 +129,13 @@ export function MediaTab({ person: p }: { person: Person }) {
               </div>
             ) : (
               <div className={'album' + (sec.kind === 'video' ? ' album-video' : '')}>
-                {list.map((m, i) => (
+                {list.map((e, i) => (
                   <Tile
-                    key={m.id}
-                    item={m}
-                    onOpen={() => openLightbox({ ids: list.map(x => x.id), index: i, ownerId: p.id })}
-                    onDelete={() => askDeleteMedia(m.id, p.id)}
+                    key={e.item.id}
+                    entry={e}
+                    ownerName={nameOf(e.ownerId)}
+                    onOpen={() => openLightbox({ ids: list.map(x => x.item.id), index: i, ownerId: p.id })}
+                    onDelete={() => askDeleteMedia(e.item.id, p.id)}
                   />
                 ))}
                 <button className="album-add" onClick={() => add(sec.kind, sec.accept)}>

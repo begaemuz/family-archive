@@ -16,11 +16,11 @@ function sample(extraBytes?: Uint8Array): { data: ArchiveData; blobs: Map<string
   const photoId = newId();
   a.mainPhotoId = photoId;
   const blobs = new Map<string, Blob>([[photoId, new Blob([PNG], { type: 'image/png' })]]);
-  const media = [{ id: photoId, kind: 'photo' as const, mime: 'image/png', name: 'a.png', size: PNG.length, sha256: '', createdAt: 1 }];
+  const media = [{ id: photoId, kind: 'photo' as const, mime: 'image/png', name: 'a.png', size: PNG.length, sha256: '', createdAt: 1, people: [] as string[] }];
   if (extraBytes) {
     const big = newId();
     blobs.set(big, new Blob([extraBytes as BlobPart], { type: 'image/png' }));
-    media.push({ id: big, kind: 'photo', mime: 'image/png', name: 'big.png', size: extraBytes.length, sha256: '', createdAt: 1 });
+    media.push({ id: big, kind: 'photo', mime: 'image/png', name: 'big.png', size: extraBytes.length, sha256: '', createdAt: 1, people: [] });
     b.media = [big];
   }
   meta.nextSeq = 3;
@@ -173,7 +173,7 @@ describe('архив .family', () => {
     const { data, blobs } = sample();
     const htmlId = newId();
     blobs.set(htmlId, new Blob(['<html><script>alert(1)</script></html>']));
-    data.media.push({ id: htmlId, kind: 'photo', mime: 'text/html', name: 'x.jpg', size: 40, sha256: '', createdAt: 1 });
+    data.media.push({ id: htmlId, kind: 'photo', mime: 'text/html', name: 'x.jpg', size: 40, sha256: '', createdAt: 1, people: [] });
     data.persons[1].media = [htmlId];
     data.media[0].mime = 'text/html'; // настоящий PNG с поддельным типом
     const payload = await packArchive(data, id => blobs.get(id));

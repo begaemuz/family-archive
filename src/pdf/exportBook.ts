@@ -3,6 +3,7 @@
    Контакты (телефон, email, адрес) в книгу не попадают — книгу пересылают родственникам. */
 import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { relationGroups } from '../domain/kinship';
+import { personMedia } from '../domain/mediaPeople';
 import { layoutRows } from '../domain/layout';
 import { birthYear, fullName, place, yearLine } from '../domain/people';
 import { burialFilled } from '../domain/normalize';
@@ -180,14 +181,16 @@ export async function buildBook(data: ArchiveData, onStep: (s: string) => void):
       { text: b.text, fontSize: 10.5, lineHeight: 1.35 },
     ]);
 
-    const albumPhotos = p.media.map(id => byMedia.get(id)).filter((m): m is MediaItem => !!m && m.kind === 'photo');
+    // свои фото и фото других людей, где человек отмечен
+    const mine = personMedia(p, data.media, persons).map(e => e.item);
+    const albumPhotos = mine.filter(m => m.kind === 'photo');
     const albumImgs: string[] = [];
     for (const m of albumPhotos.slice(0, 12)) {
       const b = mediaRegistry.get(m.id);
       const j = b ? await toJpeg(b, 700) : null;
       if (j) albumImgs.push(j.url);
     }
-    const others = p.media.map(id => byMedia.get(id)).filter((m): m is MediaItem => !!m && m.kind !== 'photo');
+    const others = mine.filter(m => m.kind !== 'photo');
     const videos = others.filter(m => m.kind === 'video').length;
     const audios = others.filter(m => m.kind === 'audio').length;
     const docs = p.documents.map(id => byMedia.get(id)).filter((m): m is MediaItem => !!m);

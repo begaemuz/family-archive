@@ -104,6 +104,8 @@ export interface MediaItem {
   size: number;
   sha256: string;
   createdAt: number;
+  /** кто ещё на фото/видео (кроме владельца — того, в чьём альбоме файл); у них файл тоже виден */
+  people: string[];
 }
 
 export interface Story {

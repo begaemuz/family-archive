@@ -47,6 +47,8 @@ interface ArchiveState {
   // медиа
   addMedia(item: MediaItem, blob: Blob): void;
   deleteMedia(id: string): void;
+  /** отметить людей на фото/видео (владелец файла в список не входит) */
+  setMediaPeople(mediaId: string, people: string[]): void;
 
   // истории
   saveStory(story: Story): void;
@@ -147,6 +149,19 @@ export const useArchive = create<ArchiveState>((set, get) => ({
     const owned = new Set([...(p.mainPhotoId ? [p.mainPhotoId] : []), ...p.media, ...p.documents]);
     get().apply(
       d => {
+        // фото, на которых отмечены другие люди, не пропадают — переходят к первому отмеченному
+        d.media = d.media.map(m => {
+          const people = m.people.filter(x => x !== id);
+          if (p.media.includes(m.id) && people.length) {
+            const heir = d.persons.find(x => x.id === people[0]);
+            if (heir) {
+              heir.media = [...heir.media, m.id];
+              owned.delete(m.id);
+              return { ...m, people: people.slice(1) };
+            }
+          }
+          return people.length === m.people.length ? m : { ...m, people };
+        });
         d.persons = d.persons.filter(x => x.id !== id);
         d.relations = d.relations.filter(r => r.from !== id && r.to !== id);
         // медиа человека удаляются, если на них не ссылаются истории
@@ -219,6 +234,21 @@ export const useArchive = create<ArchiveState>((set, get) => ({
   addMedia(item, blob) {
     mediaRegistry.set(item.id, blob);
     get().apply(d => d.media.push(item), { history: [{ action: 'create', entity: 'media', id: item.id, summary: item.name }] });
+  },
+
+  setMediaPeople(mediaId, people) {
+    const d0 = get().data;
+    const m = d0?.media.find(x => x.id === mediaId);
+    if (!d0 || !m) return;
+    const owner = d0.persons.find(p => p.media.includes(mediaId))?.id;
+    const known = new Set(d0.persons.map(p => p.id));
+    const next = [...new Set(people)].filter(x => x !== owner && known.has(x));
+    get().apply(
+      d => {
+        d.media = d.media.map(x => (x.id === mediaId ? { ...x, people: next } : x));
+      },
+      { history: [{ action: 'update', entity: 'media', id: mediaId, summary: `Отметки на фото: ${next.length}` }] },
+    );
   },
 
   deleteMedia(id) {

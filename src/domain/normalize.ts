@@ -203,6 +203,7 @@ export function normalizeMedia(raw: unknown): MediaItem | null {
     size: num(m.size),
     sha256: str(m.sha256, 64),
     createdAt: num(m.createdAt, Date.now()),
+    people: [...new Set(ids(m.people))],
   };
 }
 
@@ -293,6 +294,12 @@ export function normalizeArchive(raw: {
     p.documents = p.documents.filter(id => mediaIds.has(id));
   });
   if (meta.coverId && !mediaIds.has(meta.coverId)) meta.coverId = null;
+  // отметки людей на фото: только существующие люди и не сам владелец файла
+  const ownerOf = new Map<string, string>();
+  persons.forEach(p => p.media.forEach(id => ownerOf.set(id, p.id)));
+  media.forEach(m => {
+    m.people = m.people.filter(id => seen.has(id) && id !== ownerOf.get(m.id));
+  });
   const stories = (Array.isArray(raw.stories) ? raw.stories : [])
     .map(normalizeStory)
     .filter((s): s is Story => !!s)
