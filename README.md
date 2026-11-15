@@ -66,11 +66,11 @@ npm test
 
 ## Публикация на GitHub Pages
 
-1. Создайте репозиторий и отправьте код.
-2. В репозитории: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-3. Добавьте workflow со сборкой `npm ci && npm run build` и публикацией папки `dist` (шаблон «Static HTML» в разделе Actions подойдёт, если указать `path: dist`).
+Публикация настроена в [.github/workflows/deploy.yml](.github/workflows/deploy.yml): при каждой отправке в ветку `main` GitHub сам прогоняет тесты, собирает приложение и выкладывает его.
 
-Пути в сборке относительные, поэтому сайт работает и в подпапке `https://<имя>.github.io/<репозиторий>/`.
+Один раз нужно включить: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+
+Пути в сборке относительные, поэтому сайт работает в подпапке `https://<логин>.github.io/<репозиторий>/`. На сайт попадает только приложение — семейные архивы `.family` остаются у вас.
 
 ## Структура
 
