@@ -3,6 +3,7 @@ import { DropZone } from './components/app/DropZone';
 import { MergeDialog } from './components/app/MergeDialog';
 import { markArchiveOpen, StartScreen } from './components/app/StartScreen';
 import { TopBar } from './components/app/TopBar';
+import { UpdateBanner } from './components/app/UpdateBanner';
 import { TreeCanvas } from './components/canvas/TreeCanvas';
 import { ConfirmDialog } from './components/dialogs/ConfirmDialog';
 import { CropDialog } from './components/dialogs/CropDialog';
@@ -59,6 +60,7 @@ export function App() {
       <CropDialog />
       <ConfirmDialog />
       <Toast />
+      <UpdateBanner />
     </>
   );
 }

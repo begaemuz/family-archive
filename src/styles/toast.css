@@ -20,3 +20,44 @@
     opacity: 1;
     transform: translate(-50%, 0);
 }
+
+/* ---------- «Доступна новая версия» ---------- */
+.update-banner {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    z-index: 400;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: min(440px, calc(100vw - 32px));
+    padding: 10px 10px 10px 14px;
+    border-radius: 16px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    color: var(--text);
+    animation: fade .2s ease;
+}
+
+.update-banner > svg {
+    color: var(--accent);
+    flex: none;
+}
+
+.update-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    font-size: 14px;
+}
+
+.update-text small {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.update-banner button {
+    flex: none;
+}

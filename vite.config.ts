@@ -54,7 +54,14 @@ export default defineConfig(({ mode }) => {
     // относительные пути — сайт работает и в подпапке GitHub Pages, и с диска
     base: './',
     // в автономном файле распознавание лиц недоступно (модели с диска не загрузить) — движок не вшиваем
-    resolve: single ? { alias: { '@vladmandic/face-api': fileURLToPath(new URL('./src/faces/unavailable.ts', import.meta.url)) } } : undefined,
+    resolve: single
+      ? {
+          alias: {
+            '@vladmandic/face-api': fileURLToPath(new URL('./src/faces/unavailable.ts', import.meta.url)),
+            'virtual:pwa-register': fileURLToPath(new URL('./src/pwa/noop.ts', import.meta.url)),
+          },
+        }
+      : undefined,
     plugins: [
       react(),
       cspPlugin(single),
@@ -62,8 +69,9 @@ export default defineConfig(({ mode }) => {
         ? [viteSingleFile(), renameSingle()]
         : [
             VitePWA({
-              registerType: 'autoUpdate',
-              injectRegister: 'script-defer',
+              // новая версия — по кнопке «Обновить» (src/pwa/update.ts), а не молча через две перезагрузки
+              registerType: 'prompt',
+              injectRegister: false,
               includeAssets: ['icon.svg', 'logo.svg', 'logo-512.png'],
               manifest: {
                 name: 'Rodiva — семейный архив',
@@ -88,7 +96,7 @@ export default defineConfig(({ mode }) => {
                 navigateFallbackDenylist: [/family-archive\.html$/, /map\.html/],
                 // страница карты открывается с ключом в адресе (?k=…) — для кэша это та же map.html
                 ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^k$/],
-                // модели распознавания лиц (~7 МБ) — не в предзагрузке, а в кэш при первом использовании; дальше работают офлайн
+                // модели распознавания лиц (~12 МБ) — не в предзагрузке, а в кэш при первом использовании; дальше работают офлайн
                 runtimeCaching: [{ urlPattern: /\/models\/[^/]+\.(bin|json)$/, handler: 'CacheFirst', options: { cacheName: 'face-models' } }],
               },
             }),

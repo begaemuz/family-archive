@@ -120,6 +120,8 @@ function region(c: HTMLCanvasElement, x: number, y: number, w: number, h: number
 interface Found {
   /** найдено только в увеличенном куске — там чаще «лица» в узорах, нужен порог выше */
   tile: boolean;
+  /** глаза, нос и рот стоят как у лица (по 68 точкам) */
+  shape: boolean;
   x: number;
   y: number;
   w: number;
@@ -134,14 +136,14 @@ let cpuFallback = false;
 /** Лица на холсте: весь снимок + 4 увеличенных куска (мелкие лица на групповых фото),
     повторы убираются; если ничего — ещё раз с полями (лицо «во весь кадр», как на фото профиля). */
 async function findFaces(faceapi: FaceApi, c: HTMLCanvasElement): Promise<Found[]> {
-  const opt = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
+  const opt = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.45 });
   const all: Found[] = [];
   const run = async (src: HTMLCanvasElement, ox: number, oy: number, tile = false) => {
     try {
       const found = await faceapi.detectAllFaces(src, opt).withFaceLandmarks().withFaceDescriptors();
       found.forEach(f => {
         const b = f.detection.box;
-        all.push({ tile, x: b.x + ox, y: b.y + oy, w: b.width, h: b.height, score: f.detection.score, descriptor: f.descriptor });
+        all.push({ tile, shape: faceShape(f.landmarks, b.width), x: b.x + ox, y: b.y + oy, w: b.width, h: b.height, score: f.detection.score, descriptor: f.descriptor });
       });
     } catch (e) {
       // одно «неудобное» лицо (рамка у края снимка) роняет обработку всего фото —
@@ -158,7 +160,8 @@ async function findFaces(faceapi: FaceApi, c: HTMLCanvasElement): Promise<Found[
         if (w < 20 || h < 20) continue;
         const { r } = region(src, x, y, w, h);
         const one = await Promise.resolve(faceapi.detectSingleFace(r, opt).withFaceLandmarks().withFaceDescriptor()).catch(() => undefined);
-        if (one) all.push({ tile, x: b.x + ox, y: b.y + oy, w: b.width, h: b.height, score: d.score, descriptor: one.descriptor });
+        if (one)
+          all.push({ tile, shape: faceShape(one.landmarks, one.detection.box.width), x: b.x + ox, y: b.y + oy, w: b.width, h: b.height, score: d.score, descriptor: one.descriptor });
       }
     }
   };
@@ -182,22 +185,48 @@ async function findFaces(faceapi: FaceApi, c: HTMLCanvasElement): Promise<Found[
     await run(r, ox, oy);
   }
 
-  // одно лицо могли найти и целиком, и в куске — оставляем самую уверенную рамку
+  // одно лицо могли найти и целиком, и в куске — оставляем самую уверенную рамку.
+  // Сравниваем по IoU: маленькое лицо рядом с большим (ребёнок у щеки взрослого) не должно «съедаться»
   all.sort((a, b) => b.score - a.score);
   const keep: Found[] = [];
-  for (const f of all) if (!keep.some(k => boxOverlap(k, f) > 0.4)) keep.push(f);
-  // уверенность: по всему снимку ≥ 0.55, только в увеличенном куске ≥ 0.7 (руки, игрушки, принты на одежде
-  // детектор «видит» лицами как раз при увеличении); слишком мелкое и вытянутое — тоже не лицо.
-  // Что всё же проскочит — убирается кнопкой «Это не лицо» и больше не показывается
-  // (рамки лиц у этого детектора вытянуты вверх: ширина/высота бывает 0.5 и меньше у повёрнутых голов)
-  const ok = keep.filter(f => f.score >= (f.tile ? 0.7 : 0.55) && f.w >= 24 && f.h >= 24 && f.w / f.h > 0.4 && f.w / f.h < 1.5);
-  // сомнительная находка прямо под уверенным лицом и заметно меньше его — это одежда, руки, игрушка у груди
-  const sure = ok.filter(f => f.score >= 0.9);
-  return ok.filter(
-    f =>
-      f.score >= 0.8 ||
-      !sure.some(s => s !== f && f.w * f.h < s.w * s.h * 0.6 && f.y > s.y + s.h * 0.5 && f.y < s.y + s.h * 3 && Math.abs(f.x + f.w / 2 - (s.x + s.w / 2)) < s.w * 1.2),
-  );
+  for (const f of all) if (!keep.some(k => boxIoU(k, f) > 0.35)) keep.push(f);
+  // Уверенная находка (≥ 0.85) — лицо. Сомнительная — только если по 68 точкам это похоже на лицо
+  // (руки, игрушки, принты на одежде так не проходят) и рамка не крошечная (там точки ненадёжны)
+  return keep.filter(f => f.w >= 20 && f.h >= 20 && f.w / f.h > 0.4 && f.w / f.h < 1.5 && (f.score >= 0.85 || (f.shape && f.w >= 32 && f.score >= 0.5)));
+}
+
+/** Похоже ли расположение глаз, носа и рта на лицо. У настоящих лиц: расстояние между глазами —
+    0.25–0.65 ширины рамки, рот ниже глаз на 0.6–1.8 межглазья, нос не дальше 0.75 межглазья от середины глаз.
+    У рук, игрушек и узоров точки ложатся иначе (например, «рот» выше «глаз»). */
+function faceShape(l: { positions: { x: number; y: number }[] }, boxW: number): boolean {
+  const p = l.positions;
+  if (p.length < 68 || boxW <= 0) return false;
+  const mean = (a: number, b: number) => {
+    let x = 0;
+    let y = 0;
+    for (let i = a; i <= b; i++) [x, y] = [x + p[i].x, y + p[i].y];
+    return { x: x / (b - a + 1), y: y / (b - a + 1) };
+  };
+  const le = mean(36, 41);
+  const re = mean(42, 47);
+  const mouth = mean(48, 67);
+  const eyes = { x: (le.x + re.x) / 2, y: (le.y + re.y) / 2 };
+  const ed = Math.hypot(re.x - le.x, re.y - le.y);
+  if (ed <= 0) return false;
+  // рот «ниже» глаз — по перпендикуляру к линии глаз (голова может быть наклонена)
+  const ux = (re.x - le.x) / ed;
+  const uy = (re.y - le.y) / ed;
+  const down = ((mouth.x - eyes.x) * -uy + (mouth.y - eyes.y) * ux) / ed;
+  const side = Math.abs((p[30].x - eyes.x) * ux + (p[30].y - eyes.y) * uy) / ed;
+  return ed / boxW >= 0.25 && ed / boxW <= 0.65 && down >= 0.6 && down <= 1.8 && side <= 0.75;
+}
+
+/** Пересечение рамок к их объединению (IoU). */
+function boxIoU(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) {
+  const ix = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+  const iy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+  const i = ix * iy;
+  return i / Math.max(1e-9, a.w * a.h + b.w * b.h - i);
 }
 
 /** Лица на фото. */
