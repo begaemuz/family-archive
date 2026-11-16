@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAccess } from '../../hooks/useAccess';
 import { relationGroups } from '../../domain/kinship';
 import { personMedia } from '../../domain/mediaPeople';
@@ -21,9 +21,82 @@ export function Avatar({ person, cls = 'avatar' }: { person: Person; cls?: strin
   return url ? <img src={url} alt={fullName(person)} draggable={false} /> : <div className={cls}>{initials(person)}</div>;
 }
 
+/** Кнопки карточки: на компьютере — «изменить» и «удалить» иконками, на телефоне — меню «⋮». */
+function PersonActions({ person: p, onClose }: { person: Person; onClose(): void }) {
+  const acc = useAccess();
+  const canEdit = acc.canEditPerson(p.id);
+  const canDelete = acc.canDeletePerson(p.id);
+  const [menu, setMenu] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menu) return;
+    const onDown = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setMenu(false);
+    window.addEventListener('pointerdown', onDown, true);
+    return () => window.removeEventListener('pointerdown', onDown, true);
+  }, [menu]);
+  useEffect(() => setMenu(false), [p.id]);
+
+  return (
+    <div className="sp-actions">
+      {canEdit && (
+        <button className="ghost wide-only" title="Редактировать" onClick={() => editPersonFlow(p.id)}>
+          <Icon name="edit" />
+        </button>
+      )}
+      {canDelete && (
+        <button className="ghost danger wide-only" title="Удалить человека" onClick={() => askDeletePerson(p.id)}>
+          <Icon name="trash" />
+        </button>
+      )}
+      {(canEdit || canDelete) && (
+        <div className="sp-more narrow-only" ref={ref}>
+          <button className="ghost" title="Действия" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(m => !m)}>
+            <Icon name="more-v" />
+          </button>
+          {menu && (
+            <div className="sp-more-menu" role="menu">
+              {canEdit && (
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    setMenu(false);
+                    editPersonFlow(p.id);
+                  }}
+                >
+                  <Icon name="edit" size={16} /> Редактировать
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  role="menuitem"
+                  className="danger"
+                  onClick={() => {
+                    setMenu(false);
+                    askDeletePerson(p.id);
+                  }}
+                >
+                  <Icon name="trash" size={16} /> Удалить
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      {!canEdit && (
+        <span className="ro-badge" title="Этот человек не из вашей ветки — только просмотр">
+          <Icon name="eye" size={14} />
+          <span className="wide-only">просмотр</span>
+        </span>
+      )}
+      <button className="ghost" title="Закрыть" onClick={onClose}>
+        <Icon name="x" />
+      </button>
+    </div>
+  );
+}
+
 export function PersonView({ person: p }: { person: Person }) {
   const tab = useUi(s => s.panel.tab);
-  const acc = useAccess();
   const setTab = useUi(s => s.setTab);
   const closePanel = useUi(s => s.closePanel);
   const persons = useArchive(s => s.data!.persons);
@@ -50,32 +123,18 @@ export function PersonView({ person: p }: { person: Person }) {
   return (
     <>
       <div className="sp-head">
-        <div className="sp-actions">
-          {acc.canEditPerson(p.id) && (
-            <button className="ghost" title="Редактировать" onClick={() => editPersonFlow(p.id)}>
-              <Icon name="edit" />
-            </button>
-          )}
-          {acc.canDeletePerson(p.id) && (
-            <button className="ghost danger" title="Удалить человека" onClick={() => askDeletePerson(p.id)}>
-              <Icon name="trash" />
-            </button>
-          )}
-          {!acc.canEditPerson(p.id) && (
-            <span className="ro-badge" title="Этот человек не из вашей ветки — только просмотр">
-              <Icon name="eye" size={14} /> просмотр
-            </span>
-          )}
-          <button className="ghost" title="Закрыть" onClick={closePanel}>
-            <Icon name="x" />
-          </button>
-        </div>
         <div className="sp-person">
           <div className={'sp-avatar ' + genderClass(p.gender)}>
             <Avatar person={p} />
           </div>
-          <div>
-            <div className="sp-name">{fullName(p)}</div>
+          <div className="sp-info">
+            {/* ФИО и кнопки — в один ряд; длинное ФИО обрезается «…», целиком — в подсказке */}
+            <div className="sp-title-row">
+              <div className="sp-name" title={fullName(p)}>
+                {fullName(p)}
+              </div>
+              <PersonActions person={p} onClose={closePanel} />
+            </div>
             {yearLine(p) && <div className="sp-years">{yearLine(p)}</div>}
             {chips.length > 0 && (
               <div className="chips">

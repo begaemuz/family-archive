@@ -22,7 +22,7 @@ const FEATURES: { icon: string; title: string; text: string }[] = [
   { icon: 'story', title: 'Семейные истории', text: 'Записывайте воспоминания и отмечайте в них людей — история появится в карточке каждого.' },
   { icon: 'book-pdf', title: 'PDF-книга', text: 'Одна кнопка — и готова красивая книга: схема древа, страницы людей, истории и указатель имён.' },
   { icon: 'shield', title: 'Шифрование', text: 'AES-256 и Argon2id. Без пароля файл — набор случайных байтов. Пароль нигде не хранится.' },
-  { icon: 'globe', title: 'Работает без интернета', text: 'Всё происходит в браузере. После первого открытия сайт работает офлайн, есть и версия одним файлом.' },
+  { icon: 'globe', title: 'Работает без интернета', text: 'Всё происходит в браузере. После первого открытия сайт работает и офлайн.' },
 ];
 
 const STEPS: { title: string; text: string }[] = [
@@ -124,7 +124,6 @@ export function Landing({
   onCreate(): void;
   onOpen(): void;
 }) {
-  const offline = import.meta.env.PROD;
   return (
     <main className="lp">
       {/* ---------- первый экран ---------- */}
@@ -257,11 +256,6 @@ export function Landing({
           <a href={REPO} target="_blank" rel="noopener noreferrer">
             Исходный код на GitHub
           </a>
-          {offline && (
-            <a href="./family-archive.html" download>
-              Скачать офлайн-версию (один файл)
-            </a>
-          )}
         </span>
       </footer>
     </main>

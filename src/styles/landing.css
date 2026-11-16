@@ -594,6 +594,13 @@
     }
 }
 
+/* на телефоне картинка с веткой семьи занимает целый экран — сразу текст и кнопки */
+@media (max-width: 700px) {
+    .lp-hero-art {
+        display: none;
+    }
+}
+
 @media (max-width: 700px) {
     .lp-nav {
         display: none;
