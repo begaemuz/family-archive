@@ -131,3 +131,19 @@ describe('фото по годам', () => {
     expect(g[2].items).toHaveLength(2);
   });
 });
+
+describe('«Это не лицо»', () => {
+  const d = btoa(String.fromCharCode(...new Uint8Array(new Float32Array(128).fill(0.25).buffer)));
+
+  it('рамка помечается, человек с неё снимается, пометка переживает сохранение', () => {
+    const { data, wife, photo } = sample();
+    photo.faces = [{ x: 0.1, y: 0.1, w: 0.1, h: 0.1, d, p: wife.id }];
+    useArchive.getState().open(data, new Map());
+    useArchive.getState().notAFace(photo.id, 0);
+    const f = useArchive.getState().data!.media[0].faces![0];
+    expect(f.nf).toBe(true);
+    expect(f.p).toBeUndefined();
+    const saved = normalizeArchive(JSON.parse(JSON.stringify(useArchive.getState().data)));
+    expect(saved.media[0].faces![0].nf).toBe(true);
+  });
+});

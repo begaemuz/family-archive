@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { fullName } from '../../domain/people';
 import type { MediaItem } from '../../domain/types';
+import { FACES_VERSION } from '../../domain/normalize';
 import { facesAvailable, matchFaces, savedMatches, toMediaFaces, type FaceMatch } from '../../faces/faces';
 import { useArchive } from '../../store/archiveStore';
 import { Icon } from '../../ui/Icon';
@@ -26,6 +27,8 @@ export function useFaceScan(item: MediaItem | undefined, enabled: boolean, auto:
   const [hover, setHover] = useState<number | null>(null);
   const canRun = facesAvailable && !!item && enabled && item.kind === 'photo';
   const saved = useMemo(() => (item?.faces && data ? savedMatches(data, item) : null), [data, item]);
+  // лица найдены старой версией поиска (пропускала лица, рамки мимо) — найти заново, ответы перенесутся
+  const stale = !!item?.faces && item.facesV !== FACES_VERSION;
 
   const run = () => {
     if (!item || !canRun || busy?.id === item.id) return;
@@ -46,15 +49,16 @@ export function useFaceScan(item: MediaItem | undefined, enabled: boolean, auto:
 
   useEffect(() => {
     setHover(null);
-    // только что загруженное фото, которое ещё не проверяли, — проверить сразу
-    if (canRun && auto && !item?.faces) run();
+    // только что загруженное фото, которое ещё не проверяли, или проверенное старой версией — проверить сразу
+    if (canRun && ((auto && !item?.faces) || stale)) run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item?.id, canRun]);
 
   const id = item?.id;
   const status: FaceScan['status'] = busy?.id === id ? 'busy' : error?.id === id ? 'error' : saved ? 'done' : 'idle';
-  const msg = busy && busy.id === id ? busy.msg : error && error.id === id ? error.msg : saved && !saved.length ? 'Лиц не нашлось' : '';
-  return { status, msg, matches: saved ?? [], canAsk: canRun, hover, setHover, run };
+  const visible = saved && !(stale && canRun) ? saved : null;
+  const msg = busy && busy.id === id ? busy.msg : error && error.id === id ? error.msg : visible && !visible.some(m => !m.notFace) ? 'Лиц не нашлось' : '';
+  return { status, msg, matches: visible ?? [], canAsk: canRun, hover, setHover, run };
 }
 
 /** Рамки лиц поверх фото: узнанные — с именем, предложения — с вопросом.
@@ -62,6 +66,7 @@ export function useFaceScan(item: MediaItem | undefined, enabled: boolean, auto:
 export function FaceBoxes({ scan, item }: { scan: FaceScan; item: MediaItem }) {
   const persons = useArchive(s => s.data!.persons);
   const [menu, setMenu] = useState<number | null>(null);
+  const boxEls = useRef(new Map<number, HTMLDivElement>());
   useEffect(() => setMenu(null), [item.id]);
   const name = (id: string) => {
     const p = persons.find(x => x.id === id);
@@ -70,7 +75,8 @@ export function FaceBoxes({ scan, item }: { scan: FaceScan; item: MediaItem }) {
   if (!scan.matches.length) return null;
   return (
     <div className={'lb-faces' + (scan.hover !== null || menu !== null ? ' show' : '') + (scan.canAsk ? ' editable' : '')}>
-      {scan.matches.map((m, i) => (
+      {scan.matches.map((m, i) =>
+        m.notFace ? null : (
         <div
           key={i}
           className={
@@ -82,6 +88,10 @@ export function FaceBoxes({ scan, item }: { scan: FaceScan; item: MediaItem }) {
             // у левого/правого края фото подпись прижимается к краю рамки, а не по центру
             (m.face.box.x + m.face.box.w / 2 < 0.15 ? ' label-l' : m.face.box.x + m.face.box.w / 2 > 0.85 ? ' label-r' : '')
           }
+          ref={el => {
+            if (el) boxEls.current.set(i, el);
+            else boxEls.current.delete(i);
+          }}
           style={{ left: `${m.face.box.x * 100}%`, top: `${m.face.box.y * 100}%`, width: `${m.face.box.w * 100}%`, height: `${m.face.box.h * 100}%` }}
           title={scan.canAsk ? 'Кто это? Нажмите, чтобы исправить' : undefined}
           onClick={e => {
@@ -92,14 +102,17 @@ export function FaceBoxes({ scan, item }: { scan: FaceScan; item: MediaItem }) {
         >
           {(m.knownId || m.suggestId) && <span className="lb-face-name">{m.knownId ? name(m.knownId) : `${name(m.suggestId!)}?`}</span>}
         </div>
-      ))}
-      {menu !== null && scan.matches[menu] && <FaceMenu item={item} index={menu} match={scan.matches[menu]} onClose={() => setMenu(null)} />}
+        ),
+      )}
+      {menu !== null && scan.matches[menu] && (
+        <FaceMenu item={item} index={menu} match={scan.matches[menu]} anchor={() => boxEls.current.get(menu) ?? null} onClose={() => setMenu(null)} />
+      )}
     </div>
   );
 }
 
 /** «Кто это?» у одного лица: это не тот / это вот этот человек. */
-function FaceMenu({ item, index, match, onClose }: { item: MediaItem; index: number; match: FaceMatch; onClose(): void }) {
+function FaceMenu({ item, index, match, anchor, onClose }: { item: MediaItem; index: number; match: FaceMatch; anchor(): HTMLElement | null; onClose(): void }) {
   const data = useArchive(s => s.data!);
   const [q, setQ] = useState('');
   const ref = useRef<HTMLDivElement>(null);
@@ -131,21 +144,28 @@ function FaceMenu({ item, index, match, onClose }: { item: MediaItem; index: num
     };
   }, [onClose]);
 
-  // меню не должно уезжать за край экрана (узкий телефон, лицо у края фото) — сдвигаем
-  const [shift, setShift] = useState(0);
+  // место на экране: под лицом, если влезает; иначе над ним; иначе — где больше места, со своей прокруткой.
+  // По горизонтали — по центру лица, но не за краями экрана
+  const [pos, setPos] = useState<{ left: number; top: number; maxHeight?: number } | null>(null);
   useLayoutEffect(() => {
-    const r = ref.current?.getBoundingClientRect();
-    if (!r) return;
-    const left = r.left - shift;
-    const right = r.right - shift;
-    setShift(left < 12 ? 12 - left : right > innerWidth - 12 ? innerWidth - 12 - right : 0);
+    const a = anchor()?.getBoundingClientRect();
+    const m = ref.current?.getBoundingClientRect();
+    if (!a || !m) return;
+    const gap = 10;
+    const pad = 8;
+    const below = innerHeight - a.bottom - gap - pad;
+    const above = a.top - gap - pad;
+    const left = Math.min(Math.max(a.left + a.width / 2 - m.width / 2, pad), innerWidth - m.width - pad);
+    if (m.height <= below) setPos({ left, top: a.bottom + gap });
+    else if (m.height <= above) setPos({ left, top: a.top - gap - m.height });
+    else if (below >= above) setPos({ left, top: a.bottom + gap, maxHeight: Math.max(160, below) });
+    else setPos({ left, top: Math.max(pad, a.top - gap - Math.min(m.height, above)), maxHeight: Math.max(160, above) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
 
-  const b = match.face.box;
-  // меню под лицом; если лицо внизу снимка — над ним
-  const below = b.y + b.h < 0.6;
-  const style = { left: `${(b.x + b.w / 2) * 100}%`, transform: `translateX(calc(-50% + ${shift}px))`, ...(below ? { top: `calc(${(b.y + b.h) * 100}% + 10px)` } : { bottom: `calc(${(1 - b.y) * 100}% + 10px)` }) };
+  const style: CSSProperties = pos
+    ? { position: 'fixed', left: pos.left, top: pos.top, transform: 'none', maxHeight: pos.maxHeight, overflowY: pos.maxHeight ? 'auto' : undefined }
+    : { position: 'fixed', left: 0, top: 0, visibility: 'hidden', transform: 'none' };
   const st = useArchive.getState();
 
   return (
@@ -162,6 +182,15 @@ function FaceMenu({ item, index, match, onClose }: { item: MediaItem; index: num
           <Icon name="x" size={14} /> Это не {fullName(cur)}
         </button>
       )}
+      <button
+        className="lb-face-menu-notface"
+        onClick={() => {
+          st.notAFace(item.id, index);
+          onClose();
+        }}
+      >
+        <Icon name="eye-off" size={14} /> Это не лицо — убрать рамку
+      </button>
       <input value={q} placeholder="Найти человека…" autoFocus onChange={e => setQ(e.target.value)} />
       <div className="lb-face-menu-list">
         {!q.trim() && list.length > 0 && <div className="lb-face-menu-hint">Отмечены на фото</div>}
@@ -235,7 +264,7 @@ export function FaceScanButton({ scan }: { scan: FaceScan }) {
       </span>
     );
   if (scan.status === 'done' || scan.status === 'error') {
-    const unknown = scan.matches.filter(m => !m.knownId && !m.suggestId).length;
+    const unknown = scan.matches.filter(m => !m.notFace && !m.knownId && !m.suggestId).length;
     const text = scan.msg || (unknown ? `Не узнал: ${unknown}` : '');
     // лица уже найдены и сохранены; «проверить снова» — сравнить с родными заново (например, после новых фото профиля)
     return (

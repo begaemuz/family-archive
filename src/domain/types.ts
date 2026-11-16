@@ -117,6 +117,8 @@ export interface MediaFace {
   s?: string;
   /** кем это лицо точно не является (ответ «Это не …») */
   n?: string[];
+  /** «Это не лицо» — рамку не показывать (руки, игрушки, рисунки на одежде) */
+  nf?: boolean;
 }
 
 export interface MediaItem {

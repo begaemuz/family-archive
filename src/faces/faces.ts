@@ -26,6 +26,8 @@ export interface FaceMatch {
   distance: number;
   /** кем это лицо точно не является (ваши исправления) */
   not?: string[];
+  /** вы сказали «это не лицо» — рамку не показываем */
+  notFace?: boolean;
 }
 
 /** порог похожести: меньше — строже. 0.5 — мало ложных совпадений на семейных фото */
@@ -116,6 +118,8 @@ function region(c: HTMLCanvasElement, x: number, y: number, w: number, h: number
 }
 
 interface Found {
+  /** найдено только в увеличенном куске — там чаще «лица» в узорах, нужен порог выше */
+  tile: boolean;
   x: number;
   y: number;
   w: number;
@@ -132,12 +136,12 @@ let cpuFallback = false;
 async function findFaces(faceapi: FaceApi, c: HTMLCanvasElement): Promise<Found[]> {
   const opt = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
   const all: Found[] = [];
-  const run = async (src: HTMLCanvasElement, ox: number, oy: number) => {
+  const run = async (src: HTMLCanvasElement, ox: number, oy: number, tile = false) => {
     try {
       const found = await faceapi.detectAllFaces(src, opt).withFaceLandmarks().withFaceDescriptors();
       found.forEach(f => {
         const b = f.detection.box;
-        all.push({ x: b.x + ox, y: b.y + oy, w: b.width, h: b.height, score: f.detection.score, descriptor: f.descriptor });
+        all.push({ tile, x: b.x + ox, y: b.y + oy, w: b.width, h: b.height, score: f.detection.score, descriptor: f.descriptor });
       });
     } catch (e) {
       // одно «неудобное» лицо (рамка у края снимка) роняет обработку всего фото —
@@ -154,7 +158,7 @@ async function findFaces(faceapi: FaceApi, c: HTMLCanvasElement): Promise<Found[
         if (w < 20 || h < 20) continue;
         const { r } = region(src, x, y, w, h);
         const one = await Promise.resolve(faceapi.detectSingleFace(r, opt).withFaceLandmarks().withFaceDescriptor()).catch(() => undefined);
-        if (one) all.push({ x: b.x + ox, y: b.y + oy, w: b.width, h: b.height, score: d.score, descriptor: one.descriptor });
+        if (one) all.push({ tile, x: b.x + ox, y: b.y + oy, w: b.width, h: b.height, score: d.score, descriptor: one.descriptor });
       }
     }
   };
@@ -170,7 +174,7 @@ async function findFaces(faceapi: FaceApi, c: HTMLCanvasElement): Promise<Found[
       [c.width - tw, c.height - th],
     ]) {
       const { r, ox, oy } = region(c, x, y, tw, th);
-      await run(r, ox, oy);
+      await run(r, ox, oy, true);
     }
   }
   if (!all.length) {
@@ -182,8 +186,10 @@ async function findFaces(faceapi: FaceApi, c: HTMLCanvasElement): Promise<Found[
   all.sort((a, b) => b.score - a.score);
   const keep: Found[] = [];
   for (const f of all) if (!keep.some(k => boxOverlap(k, f) > 0.4)) keep.push(f);
-  // слишком мелкое и вытянутое — не лицо (узоры на одежде, тени)
-  return keep.filter(f => f.w >= 20 && f.h >= 20 && f.w / f.h > 0.5 && f.w / f.h < 1.6);
+  // уверенность: по всему снимку ≥ 0.55, только в увеличенном куске ≥ 0.7 (руки, игрушки, принты на одежде
+  // детектор «видит» лицами как раз при увеличении); слишком мелкое и вытянутое — тоже не лицо.
+  // Что всё же проскочит — убирается кнопкой «Это не лицо» и больше не показывается
+  return keep.filter(f => f.score >= (f.tile ? 0.7 : 0.55) && f.w >= 24 && f.h >= 24 && f.w / f.h > 0.6 && f.w / f.h < 1.45);
 }
 
 /** Лица на фото. */
@@ -271,6 +277,7 @@ export function savedMatches(data: ArchiveData, m: MediaItem): FaceMatch[] {
     suggestId: f.s && !on.has(f.s) && !rejected.has(f.s) ? f.s : null,
     distance: 0,
     not: f.n,
+    notFace: f.nf,
   }));
 }
 
@@ -285,6 +292,7 @@ export function toMediaFaces(matches: FaceMatch[]): MediaFace[] {
     ...(m.knownId ? { p: m.knownId } : null),
     ...(m.suggestId ? { s: m.suggestId } : null),
     ...(m.not?.length ? { n: m.not } : null),
+    ...(m.notFace ? { nf: true as const } : null),
   }));
 }
 
@@ -296,7 +304,7 @@ const largest = (faces: Face[]) => faces.reduce<Face | null>((m, f) => (!m || f.
 const facesCurrent = (m: MediaItem) => !!m.faces && m.facesV === FACES_VERSION;
 
 /** Ответы со старых рамок («это он», «это не он») — на новые рамки того же лица. */
-function carryOver(faces: Face[], old: MediaFace[]): { p?: string; n?: string[] }[] {
+function carryOver(faces: Face[], old: MediaFace[]): { p?: string; n?: string[]; nf?: boolean }[] {
   return faces.map(f => {
     let best: MediaFace | null = null;
     let bestK = 0.4;
@@ -305,7 +313,7 @@ function carryOver(faces: Face[], old: MediaFace[]): { p?: string; n?: string[] 
       if (k > bestK) [best, bestK] = [o, k];
     });
     const b = best as MediaFace | null;
-    return b ? { p: b.p, n: b.n } : {};
+    return b ? { p: b.nf ? undefined : b.p, n: b.n, nf: b.nf } : {};
   });
 }
 
@@ -340,7 +348,7 @@ async function knownFaces(data: ArchiveData, skipMediaId: string): Promise<Map<s
     if (m.id === skipMediaId || !m.faces?.length) continue;
     const on = peopleOnPhoto(data, m);
     m.faces.forEach(f => {
-      const d = f.p && on.has(f.p) ? decodeDescriptor(f.d) : null;
+      const d = f.p && !f.nf && on.has(f.p) ? decodeDescriptor(f.d) : null;
       if (d && (known.get(f.p!)?.length ?? 0) < CONFIRMED_PER_PERSON) add(f.p!, d);
     });
   }
@@ -393,13 +401,13 @@ export async function matchFaces(data: ArchiveData, item: MediaItem, onProgress?
   const useSaved = facesCurrent(item) && !fresh;
   const faces = useSaved ? savedFaces(item) : await detectFaces(item.id);
   if (!faces.length) return [];
-  const prior = useSaved ? (item.faces ?? []).map(f => ({ p: f.p, n: f.n })) : carryOver(faces, item.faces ?? []);
+  const prior = useSaved ? (item.faces ?? []).map(f => ({ p: f.p, n: f.n, nf: f.nf })) : carryOver(faces, item.faces ?? []);
   onProgress?.('Сравниваю с родными…');
   const known = await knownFaces(data, item.id);
 
   const onPhoto = peopleOnPhoto(data, item);
   const rejected = new Set(item.notPeople ?? []);
-  const res: FaceMatch[] = faces.map((face, i) => ({ face, knownId: null, suggestId: null, distance: 1, not: prior[i].n }));
+  const res: FaceMatch[] = faces.map((face, i) => ({ face, knownId: null, suggestId: null, distance: 1, not: prior[i].n, notFace: prior[i].nf }));
   const usedPeople = new Set<string>();
 
   // кого уже подтвердили на этом фото — остаются на своих лицах
@@ -415,7 +423,7 @@ export async function matchFaces(data: ArchiveData, item: MediaItem, onProgress?
   const pairs: { fi: number; pid: string; d: number }[] = [];
   faces.forEach((f, fi) =>
     known.forEach((ds, pid) => {
-      if (prior[fi].n?.includes(pid)) return; // вы сказали «это не он»
+      if (prior[fi].nf || prior[fi].n?.includes(pid)) return; // «это не лицо» / «это не он»
       const d = Math.min(...ds.map(x => dist(x, f.descriptor)));
       if (d < THRESHOLD) pairs.push({ fi, pid, d });
     }),

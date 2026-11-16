@@ -194,6 +194,7 @@ function normalizeFaces(raw: unknown[]): MediaFace[] {
       ...(isId(f.p) ? { p: f.p } : null),
       ...(isId(f.s) ? { s: f.s } : null),
       ...(ids(f.n).length ? { n: [...new Set(ids(f.n))].slice(0, 50) } : null),
+      ...(f.nf === true ? { nf: true } : null),
     }));
 }
 

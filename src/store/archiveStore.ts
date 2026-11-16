@@ -69,6 +69,8 @@ interface ArchiveState {
   assignFace(mediaId: string, index: number, personId: string): void;
   /** исправить: это лицо — не тот, кого узнали (больше его на это лицо не ставить) */
   unassignFace(mediaId: string, index: number): void;
+  /** «Это не лицо» — рамку скрыть и больше не предлагать */
+  notAFace(mediaId: string, index: number): void;
 
   // истории
   saveStory(story: Story): void;
@@ -394,6 +396,16 @@ export const useArchive = create<ArchiveState>((set, get) => ({
     get().apply(d => {
       d.media = d.media.map(x =>
         x.id !== mediaId ? x : { ...x, faces: (x.faces ?? []).map((f, i) => (i === index ? { ...f, p: undefined, s: undefined, n: [...new Set([...(f.n ?? []), wrong])] } : f)) },
+      );
+    });
+  },
+
+  notAFace(mediaId, index) {
+    const m = get().data?.media.find(x => x.id === mediaId);
+    if (!m?.faces?.[index]) return;
+    get().apply(d => {
+      d.media = d.media.map(x =>
+        x.id !== mediaId ? x : { ...x, faces: (x.faces ?? []).map((f, i) => (i === index ? { ...f, nf: true, p: undefined, s: undefined } : f)) },
       );
     });
   },
