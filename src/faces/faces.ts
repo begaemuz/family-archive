@@ -122,6 +122,8 @@ interface Found {
   tile: boolean;
   /** глаза, нос и рот стоят как у лица (по 68 точкам) */
   shape: boolean;
+  /** область бровей, глаз, носа и рта (по точкам) — в координатах снимка */
+  core: Box;
   x: number;
   y: number;
   w: number;
@@ -143,7 +145,17 @@ async function findFaces(faceapi: FaceApi, c: HTMLCanvasElement): Promise<Found[
       const found = await faceapi.detectAllFaces(src, opt).withFaceLandmarks().withFaceDescriptors();
       found.forEach(f => {
         const b = f.detection.box;
-        all.push({ tile, shape: faceShape(f.landmarks, b.width), x: b.x + ox, y: b.y + oy, w: b.width, h: b.height, score: f.detection.score, descriptor: f.descriptor });
+        all.push({
+          tile,
+          shape: faceShape(f.landmarks, b.width),
+          core: landmarkCore(f.landmarks, ox, oy),
+          x: b.x + ox,
+          y: b.y + oy,
+          w: b.width,
+          h: b.height,
+          score: f.detection.score,
+          descriptor: f.descriptor,
+        });
       });
     } catch (e) {
       // одно «неудобное» лицо (рамка у края снимка) роняет обработку всего фото —
@@ -161,7 +173,17 @@ async function findFaces(faceapi: FaceApi, c: HTMLCanvasElement): Promise<Found[
         const { r } = region(src, x, y, w, h);
         const one = await Promise.resolve(faceapi.detectSingleFace(r, opt).withFaceLandmarks().withFaceDescriptor()).catch(() => undefined);
         if (one)
-          all.push({ tile, shape: faceShape(one.landmarks, one.detection.box.width), x: b.x + ox, y: b.y + oy, w: b.width, h: b.height, score: d.score, descriptor: one.descriptor });
+          all.push({
+            tile,
+            shape: faceShape(one.landmarks, one.detection.box.width),
+            core: landmarkCore(one.landmarks, x + ox, y + oy),
+            x: b.x + ox,
+            y: b.y + oy,
+            w: b.width,
+            h: b.height,
+            score: d.score,
+            descriptor: one.descriptor,
+          });
       }
     }
   };
@@ -189,7 +211,12 @@ async function findFaces(faceapi: FaceApi, c: HTMLCanvasElement): Promise<Found[
   // Сравниваем по IoU: маленькое лицо рядом с большим (ребёнок у щеки взрослого) не должно «съедаться»
   all.sort((a, b) => b.score - a.score);
   const keep: Found[] = [];
-  for (const f of all) if (!keep.some(k => boxIoU(k, f) > 0.35)) keep.push(f);
+  for (const f of all) {
+    const i = keep.findIndex(k => sameFace(k, f));
+    if (i < 0) keep.push(f);
+    // кусок лица (рот и щёки крупным планом) нашёлся увереннее целого лица — оставляем целое
+    else if (f.shape && insideCore(f, keep[i])) keep[i] = { ...f, score: Math.max(f.score, keep[i].score) };
+  }
   // Уверенная находка (≥ 0.85) — лицо. Сомнительная — только если по 68 точкам это похоже на лицо
   // (руки, игрушки, принты на одежде так не проходят) и рамка не крошечная (там точки ненадёжны)
   return keep.filter(f => f.w >= 20 && f.h >= 20 && f.w / f.h > 0.4 && f.w / f.h < 1.5 && (f.score >= 0.85 || (f.shape && f.w >= 32 && f.score >= 0.5)));
@@ -220,6 +247,33 @@ function faceShape(l: { positions: { x: number; y: number }[] }, boxW: number): 
   const side = Math.abs((p[30].x - eyes.x) * ux + (p[30].y - eyes.y) * uy) / ed;
   return ed / boxW >= 0.25 && ed / boxW <= 0.65 && down >= 0.6 && down <= 1.8 && side <= 0.75;
 }
+
+type Box = { x: number; y: number; w: number; h: number };
+
+/** Область бровей, глаз, носа и рта по 68 точкам (точки 17–67), сдвинутая на (dx, dy). */
+function landmarkCore(l: { positions: { x: number; y: number }[] }, dx: number, dy: number): Box {
+  const pts = l.positions.slice(17);
+  const xs = pts.map(q => q.x);
+  const ys = pts.map(q => q.y);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return { x: x + dx, y: y + dy, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+}
+
+/** Меньшая рамка small — часть лица big: её центр внутри глаз-носа-рта большого лица.
+    Только для уверенно найденного большого лица: куски (рот и щёки) появляются у крупных чётких лиц,
+    а неуверенная большая рамка бывает ошибочной — «два лица в одной», и тогда маленькое лицо внутри настоящее. */
+function insideCore(big: Found, small: Found) {
+  if (!big.shape || big.score < 0.85 || small.w * small.h >= big.w * big.h) return false;
+  const cx = small.x + small.w / 2;
+  const cy = small.y + small.h / 2;
+  const c = big.core;
+  return cx >= c.x && cx <= c.x + c.w && cy >= c.y && cy <= c.y + c.h;
+}
+
+/** Одно и то же лицо: рамки почти совпадают, или одна — кусок другой (рот и щёки крупного лица).
+    Ребёнок у щеки взрослого — разные лица: его центр вне глаз-носа-рта взрослого. */
+const sameFace = (a: Found, b: Found) => boxIoU(a, b) > 0.35 || insideCore(a, b) || insideCore(b, a);
 
 /** Пересечение рамок к их объединению (IoU). */
 function boxIoU(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) {
@@ -344,21 +398,16 @@ const facesCurrent = (m: MediaItem) => !!m.faces && m.facesV === FACES_VERSION;
 function carryOver(faces: Face[], old: MediaFace[]): { p?: string; n?: string[]; nf?: boolean }[] {
   return faces.map(f => {
     let best: MediaFace | null = null;
-    let bestK = 0.4;
+    let bestK = 0.3;
     old.forEach(o => {
-      const k = boxOverlap(f.box, o);
+      const k = boxIoU(f.box, o);
       if (k > bestK) [best, bestK] = [o, k];
     });
     const b = best as MediaFace | null;
-    return b ? { p: b.nf ? undefined : b.p, n: b.n, nf: b.nf } : {};
+    if (!b) return {};
+    // «это не лицо» — только на почти ту же рамку: пометка с куска лица не должна прятать целое лицо рядом
+    return { p: b.nf ? undefined : b.p, n: b.n, nf: b.nf && bestK > 0.6 ? true : undefined };
   });
-}
-
-/** Перекрытие рамок: доля пересечения от меньшей рамки. */
-function boxOverlap(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) {
-  const ix = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
-  const iy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
-  return (ix * iy) / Math.max(1e-9, Math.min(a.w * a.h, b.w * b.h));
 }
 
 /** Лица фото: сохранённые в архиве или найденные заново (новые — в found, чтобы сохранить в архив). */

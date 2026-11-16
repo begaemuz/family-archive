@@ -240,8 +240,9 @@ export function normalizeStory(raw: unknown): Story | null {
 
 export const YEAR_MIN = 1850;
 /** версия поиска лиц: 1 — быстрый детектор (пропускал мелкие лица), 2 — SSD + увеличенные куски фото,
-    3 — исправлен отбор узких рамок, 4 — проверка формы лица по 68 точкам, IoU при удалении дублей */
-export const FACES_VERSION = 4;
+    3 — исправлен отбор узких рамок, 4 — проверка формы лица по 68 точкам, IoU при удалении дублей,
+    5 — кусок крупного лица не считается отдельным лицом; «это не лицо» не переносится на соседнюю рамку */
+export const FACES_VERSION = 5;
 /** Год снимка: число из поля year или год из старого текста («лето 1985» → 1985). */
 export function mediaYear(year: unknown, date: unknown): number | null {
   const max = new Date().getFullYear() + 1;
