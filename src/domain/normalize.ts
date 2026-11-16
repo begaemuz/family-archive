@@ -214,6 +214,7 @@ export function normalizeMedia(raw: unknown): MediaItem | null {
     year: mediaYear(m.year, m.date),
     ...(ids(m.notPeople).length ? { notPeople: [...new Set(ids(m.notPeople))] } : null),
     ...(Array.isArray(m.faces) ? { faces: normalizeFaces(m.faces) } : null),
+    ...(typeof m.facesV === 'number' && Number.isInteger(m.facesV) ? { facesV: m.facesV } : null),
     ...(typeof m.updatedAt === 'number' ? { updatedAt: m.updatedAt } : null),
     ...stamps(m),
   };
@@ -237,6 +238,8 @@ export function normalizeStory(raw: unknown): Story | null {
 }
 
 export const YEAR_MIN = 1850;
+/** версия поиска лиц: 1 — быстрый детектор (пропускал мелкие лица), 2 — SSD + увеличенные куски фото */
+export const FACES_VERSION = 2;
 /** Год снимка: число из поля year или год из старого текста («лето 1985» → 1985). */
 export function mediaYear(year: unknown, date: unknown): number | null {
   const max = new Date().getFullYear() + 1;

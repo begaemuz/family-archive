@@ -34,9 +34,13 @@ export function useFaceScan(item: MediaItem | undefined, enabled: boolean, auto:
     setBusy({ id, msg: 'Ищу лица…' });
     const d = useArchive.getState().data!;
     const current = d.media.find(m => m.id === id) ?? item;
-    matchFaces(d, current, msg => setBusy(b => (b?.id === id ? { id, msg } : b)))
+    // всегда ищем заново: «Проверить снова» должна находить пропущенные лица, ответы переносятся
+    matchFaces(d, current, msg => setBusy(b => (b?.id === id ? { id, msg } : b)), true)
       .then(matches => useArchive.getState().setMediaFaces(id, toMediaFaces(matches)))
-      .catch(() => setError({ id, msg: 'Распознавание недоступно в этом браузере' }))
+      .catch(e => {
+        console.error('Распознавание лиц:', e);
+        setError({ id, msg: 'Не получилось обработать это фото' });
+      })
       .finally(() => setBusy(b => (b?.id === id ? null : b)));
   };
 

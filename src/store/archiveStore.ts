@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { autoLayout as runAutoLayout, layoutRows, type RowsLayout } from '../domain/layout';
 import { computeHidden, descGraph, descendantsOf, isAncestor } from '../domain/graph';
-import { createMeta, createPerson, newId, ownerUser } from '../domain/normalize';
+import { createMeta, createPerson, FACES_VERSION, newId, ownerUser } from '../domain/normalize';
 import { fullName } from '../domain/people';
 import type { ArchiveData, HistoryEntry, MediaFace, MediaItem, Person, RelType, Story, Tombstone } from '../domain/types';
 import { mediaRegistry } from './mediaRegistry';
@@ -331,17 +331,18 @@ export const useArchive = create<ArchiveState>((set, get) => ({
 
   setMediaFaces(mediaId, faces) {
     const m = get().data?.media.find(x => x.id === mediaId);
-    if (!m || JSON.stringify(m.faces ?? null) === JSON.stringify(faces)) return;
+    if (!m || (m.facesV === FACES_VERSION && JSON.stringify(m.faces ?? null) === JSON.stringify(faces))) return;
     get().apply(d => {
-      d.media = d.media.map(x => (x.id === mediaId ? { ...x, faces } : x));
+      d.media = d.media.map(x => (x.id === mediaId ? { ...x, faces, facesV: FACES_VERSION } : x));
     });
   },
 
   addFacesCache(found) {
     const d0 = get().data;
-    if (!d0 || !d0.media.some(m => !m.faces && found.has(m.id))) return;
+    const stale = (m: MediaItem) => found.has(m.id) && (!m.faces || m.facesV !== FACES_VERSION);
+    if (!d0 || !d0.media.some(stale)) return;
     get().apply(d => {
-      d.media = d.media.map(m => (!m.faces && found.has(m.id) ? { ...m, faces: found.get(m.id)! } : m));
+      d.media = d.media.map(m => (stale(m) ? { ...m, faces: found.get(m.id)!, facesV: FACES_VERSION } : m));
     });
   },
 

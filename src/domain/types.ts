@@ -137,6 +137,8 @@ export interface MediaItem {
   notPeople?: string[];
   /** найденные на фото лица — сохраняются, чтобы не искать заново и узнавать людей в следующий раз */
   faces?: MediaFace[];
+  /** каким поиском лиц найдены faces (FACES_VERSION); старые ищутся заново, ответы переносятся */
+  facesV?: number;
   updatedAt?: number;
   createdBy?: string;
   updatedBy?: string;
