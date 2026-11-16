@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { fullName } from '../../domain/people';
 import type { MediaItem } from '../../domain/types';
 import { facesAvailable, matchFaces, savedMatches, toMediaFaces, type FaceMatch } from '../../faces/faces';
@@ -69,7 +69,15 @@ export function FaceBoxes({ scan, item }: { scan: FaceScan; item: MediaItem }) {
       {scan.matches.map((m, i) => (
         <div
           key={i}
-          className={'lb-face' + (m.knownId ? ' known' : m.suggestId ? ' suggest' : '') + (scan.hover === i || menu === i ? ' hot' : '')}
+          className={
+            'lb-face' +
+            (m.knownId ? ' known' : m.suggestId ? ' suggest' : '') +
+            (scan.hover === i || menu === i ? ' hot' : '') +
+            // под рамкой нет места до края фото (подпись ~30px) — подпись внутрь рамки
+            (m.face.box.y + m.face.box.h > 0.86 ? ' label-in' : '') +
+            // у левого/правого края фото подпись прижимается к краю рамки, а не по центру
+            (m.face.box.x + m.face.box.w / 2 < 0.15 ? ' label-l' : m.face.box.x + m.face.box.w / 2 > 0.85 ? ' label-r' : '')
+          }
           style={{ left: `${m.face.box.x * 100}%`, top: `${m.face.box.y * 100}%`, width: `${m.face.box.w * 100}%`, height: `${m.face.box.h * 100}%` }}
           title={scan.canAsk ? 'Кто это? Нажмите, чтобы исправить' : undefined}
           onClick={e => {
@@ -119,10 +127,21 @@ function FaceMenu({ item, index, match, onClose }: { item: MediaItem; index: num
     };
   }, [onClose]);
 
+  // меню не должно уезжать за край экрана (узкий телефон, лицо у края фото) — сдвигаем
+  const [shift, setShift] = useState(0);
+  useLayoutEffect(() => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    const left = r.left - shift;
+    const right = r.right - shift;
+    setShift(left < 12 ? 12 - left : right > innerWidth - 12 ? innerWidth - 12 - right : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
+
   const b = match.face.box;
   // меню под лицом; если лицо внизу снимка — над ним
   const below = b.y + b.h < 0.6;
-  const style = { left: `${Math.min(Math.max(b.x + b.w / 2, 0.12), 0.88) * 100}%`, ...(below ? { top: `calc(${(b.y + b.h) * 100}% + 10px)` } : { bottom: `calc(${(1 - b.y) * 100}% + 10px)` }) };
+  const style = { left: `${(b.x + b.w / 2) * 100}%`, transform: `translateX(calc(-50% + ${shift}px))`, ...(below ? { top: `calc(${(b.y + b.h) * 100}% + 10px)` } : { bottom: `calc(${(1 - b.y) * 100}% + 10px)` }) };
   const st = useArchive.getState();
 
   return (

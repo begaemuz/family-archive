@@ -146,7 +146,7 @@ export const useUi = create<UiState>((set, get) => ({
     set({ selectedId });
   },
   openPerson(id, tab) {
-    set(s => ({ selectedId: id, storiesOpen: false, panel: { ...s.panel, open: true, personId: id, tab: tab ?? s.panel.tab, form: null, formDirty: false } }));
+    set(s => ({ selectedId: id, storiesOpen: false, panel: { ...s.panel, open: true, personId: id, tab: tab ?? (s.panel.personId === id ? s.panel.tab : 'info'), form: null, formDirty: false } }));
   },
   openForm(form) {
     set(s => ({ storiesOpen: false, panel: { ...s.panel, open: true, personId: form.personId ?? s.panel.personId, form, formDirty: false } }));

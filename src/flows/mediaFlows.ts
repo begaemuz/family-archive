@@ -1,4 +1,5 @@
 /* Добавление файлов: проверка типа и размера, уменьшение больших фото, контрольная сумма. */
+import { exifYear } from '../archive/exif';
 import { sha256Hex, validateFile, validationMessage } from '../archive/media';
 import { newId } from '../domain/normalize';
 import type { ArchiveData, MediaItem, MediaKind } from '../domain/types';
@@ -52,6 +53,8 @@ export async function prepareFiles(files: File[], allowed: MediaKind[]): Promise
       continue;
     }
     let blob: Blob = file.slice(0, file.size, v.info.mime);
+    // год съёмки — из исходного файла: при уменьшении фото данные о съёмке теряются
+    const year = v.info.mime === 'image/jpeg' ? await exifYear(file) : null;
     if (v.info.kind === 'photo') blob = await shrinkPhoto(blob, v.info.mime, 2000);
     const mime = blob.type || v.info.mime;
     out.push({
@@ -65,7 +68,7 @@ export async function prepareFiles(files: File[], allowed: MediaKind[]): Promise
         createdAt: Date.now(),
         people: [],
         date: '',
-        year: null,
+        year,
       },
       blob,
     });

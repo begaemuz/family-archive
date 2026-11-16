@@ -15,10 +15,10 @@ import { Icon } from '../../ui/Icon';
 
 type Kind = Exclude<MediaKind, 'document'>;
 
-const SECTIONS: { kind: Kind; title: string; icon: string; accept: string; add: string; empty: string }[] = [
-  { kind: 'photo', title: 'Фото', icon: 'image', accept: 'image/jpeg,image/png,image/gif,image/webp,image/avif', add: 'Добавить фото', empty: 'Фото пока нет' },
-  { kind: 'video', title: 'Видео', icon: 'video', accept: 'video/*,.mp4,.mov,.webm,.mkv,.avi', add: 'Добавить видео', empty: 'Видео пока нет' },
-  { kind: 'audio', title: 'Аудио', icon: 'audio', accept: 'audio/*,.mp3,.m4a,.wav,.ogg,.flac', add: 'Добавить аудио', empty: 'Аудиозаписей пока нет' },
+const SECTIONS: { kind: Kind; title: string; icon: string; accept: string; add: string; empty: string; formats: string }[] = [
+  { kind: 'photo', title: 'Фото', icon: 'image', accept: 'image/jpeg,image/png,image/gif,image/webp,image/avif', add: 'Добавить фото', empty: 'Фото пока нет', formats: 'JPG, PNG, WebP, GIF, AVIF' },
+  { kind: 'video', title: 'Видео', icon: 'video', accept: 'video/*,.mp4,.mov,.webm,.mkv,.avi', add: 'Добавить видео', empty: 'Видео пока нет', formats: 'MP4, MOV, WebM, MKV, AVI (в браузере лучше всего играют MP4 и WebM)' },
+  { kind: 'audio', title: 'Аудио', icon: 'audio', accept: 'audio/*,.mp3,.m4a,.wav,.ogg,.flac', add: 'Добавить аудио', empty: 'Аудиозаписей пока нет', formats: 'MP3, M4A, WAV, OGG, FLAC' },
 ];
 
 function DeleteButton({ onDelete, title = 'Удалить' }: { onDelete(): void; title?: string }) {
@@ -249,7 +249,9 @@ export function MediaTab({ person: p }: { person: Person }) {
         </div>
       )}
 
-      <p className="muted-note">До 200 МБ на файл. Всё хранится внутри зашифрованного архива.</p>
+      <p className="muted-note">
+        Форматы: {sec.formats}. До 200 МБ на файл. Всё хранится внутри зашифрованного архива.
+      </p>
     </div>
   );
 }
