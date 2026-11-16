@@ -37,7 +37,11 @@ function PhotoPeople({ item, scan, onOpenPerson }: { item: MediaItem; scan: Face
   const inputRef = useRef<HTMLInputElement>(null);
   const ownerId = useMemo(() => mediaOwnerId(persons, item.id), [persons, item.id]);
   const owner = ownerId ? persons.find(p => p.id === ownerId) : null;
-  const tagged = item.people.map(id => persons.find(p => p.id === id)).filter((p): p is NonNullable<typeof p> => !!p);
+  // владелец альбома показан первым (синим) — среди отмеченных его не повторяем
+  const tagged = item.people
+    .filter(id => id !== ownerId)
+    .map(id => persons.find(p => p.id === id))
+    .filter((p): p is NonNullable<typeof p> => !!p);
   // много отмеченных — показываем первых, остальные по кнопке «ещё N» (строка не разрастается на пол-экрана)
   const [showAll, setShowAll] = useState(false);
   const shown = showAll ? tagged : tagged.slice(0, TAGS_SHOWN);

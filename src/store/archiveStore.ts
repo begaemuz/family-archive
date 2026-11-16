@@ -376,10 +376,12 @@ export const useArchive = create<ArchiveState>((set, get) => ({
             // один человек — одно лицо на фото
             return f.p === personId || f.s === personId ? { ...f, p: f.p === personId ? undefined : f.p, s: f.s === personId ? undefined : f.s } : f;
           });
+          // владелец альбома и так «на фото» — в отметки его не добавляем (иначе ФИО дважды)
+          const isOwner = d.persons.some(p => p.id === personId && p.media.includes(mediaId));
           return {
             ...x,
             faces,
-            people: x.people.includes(personId) ? x.people : [...x.people, personId],
+            people: isOwner || x.people.includes(personId) ? x.people : [...x.people, personId],
             notPeople: x.notPeople?.filter(id => id !== personId),
           };
         });

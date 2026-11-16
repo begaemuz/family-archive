@@ -147,3 +147,17 @@ describe('«Это не лицо»', () => {
     expect(saved.media[0].faces![0].nf).toBe(true);
   });
 });
+
+describe('ручное указание владельца альбома на лице', () => {
+  const d = btoa(String.fromCharCode(...new Uint8Array(new Float32Array(128).fill(0.25).buffer)));
+
+  it('владелец ставится на лицо, но в отметки не добавляется (ФИО не дублируется)', () => {
+    const { data, husband, wife, photo } = sample();
+    photo.faces = [{ x: 0.1, y: 0.1, w: 0.1, h: 0.1, d }];
+    useArchive.getState().open(data, new Map());
+    useArchive.getState().assignFace(photo.id, 0, husband.id); // муж — владелец фото
+    const m = useArchive.getState().data!.media[0];
+    expect(m.faces![0].p).toBe(husband.id);
+    expect(m.people).toEqual([wife.id]);
+  });
+});
