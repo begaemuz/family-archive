@@ -543,21 +543,6 @@
     font-size: 13.5px;
 }
 
-.lp-footer-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 20px;
-}
-
-.lp-footer a {
-    color: var(--muted);
-    text-decoration: none;
-}
-
-.lp-footer a:hover {
-    color: var(--accent);
-}
-
 /* ---------- адаптив ---------- */
 @media (max-width: 960px) {
     .lp-hero {
