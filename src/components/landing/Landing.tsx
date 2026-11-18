@@ -14,8 +14,6 @@ import imgAlbum from '../../assets/landing/album.webp';
 import imgSeniors from '../../assets/landing/seniors.webp';
 import imgGrandmaBaby from '../../assets/landing/grandma-baby.webp';
 
-const REPO = 'https://github.com/begaemuz/family-archive';
-
 const FEATURES: { icon: string; title: string; text: string }[] = [
   { icon: 'tree', title: 'Родословное древо', text: 'Поколения выстраиваются сами. Степени родства — двоюродные, троюродные, родня по браку — считаются автоматически.' },
   { icon: 'image', title: 'Фото, видео и голоса', text: 'Альбом каждого человека: фотографии, видео и аудиозаписи до 200 МБ на файл. Плюс сканы документов.' },
@@ -252,11 +250,6 @@ export function Landing({
 
       <footer className="lp-footer">
         <span>Rodiva — семейный архив, открытый проект · Фото: Unsplash</span>
-        <span className="lp-footer-links">
-          <a href={REPO} target="_blank" rel="noopener noreferrer">
-            Исходный код на GitHub
-          </a>
-        </span>
       </footer>
     </main>
   );
